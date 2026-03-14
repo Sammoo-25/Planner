@@ -89,7 +89,7 @@ export function TaskItem({ task, onComplete, onEdit }: Props) {
                 <PriorityBadge priority={task.priority} />
 
                 {/* Percentage Text */}
-                {task.subtaskCount && task.subtaskCount > 0 && (task.priority === 'High' || task.priority === 'Critical') && (
+                {(task.subtaskCount ?? 0) > 0 && (task.priority === 'High' || task.priority === 'Critical') && (
                     <span className="text-[10px] font-bold text-stone-400 dark:text-zinc-500">
                         {Math.round((task.completedSubtaskCount! / task.subtaskCount) * 100)}%
                     </span>
@@ -109,7 +109,7 @@ export function TaskItem({ task, onComplete, onEdit }: Props) {
             </div>
 
             {/* Progress Bar for High/Critical Tasks */}
-            {task.subtaskCount && task.subtaskCount > 0 && (task.priority === 'High' || task.priority === 'Critical') && (
+            {(task.subtaskCount ?? 0) > 0 && (task.priority === 'High' || task.priority === 'Critical') && (
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-stone-100 dark:bg-white/5 overflow-hidden rounded-b-2xl">
                     <div
                         className={cn(

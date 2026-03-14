@@ -15,7 +15,17 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, CheckCircle2, Loader2, Circle } from "lucide-react"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem
+} from "@/components/ui/dropdown-menu"
+import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, CheckCircle2, Loader2, Circle, ListFilter } from "lucide-react"
 import {
     format,
     startOfMonth,
@@ -56,6 +66,10 @@ export default function CalendarPage() {
     const [editingTask, setEditingTask] = useState<Task | undefined>(undefined)
     const [viewingTask, setViewingTask] = useState<Task | undefined>(undefined)
 
+    // Sorting State
+    type SortOption = 'Difficulty' | 'Status' | 'Category' | 'Title'
+    const [sortBy, setSortBy] = useState<SortOption>('Difficulty')
+
     // Calendar Math
     const monthStart = startOfMonth(currentDate)
     const monthEnd = endOfMonth(currentDate)
@@ -77,6 +91,26 @@ export default function CalendarPage() {
 
     const selectedDateStr = format(selectedDate, 'yyyy-MM-dd')
     const tasksForSelectedDate = tasksByDate[selectedDateStr] || []
+
+    const sortedTasks = useMemo(() => {
+        return [...tasksForSelectedDate].sort((a, b) => {
+            switch (sortBy) {
+                case 'Difficulty':
+                    const priorityWeight = { 'Critical': 3, 'High': 2, 'Medium': 1, 'Low': 0 }
+                    return (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0)
+                case 'Status':
+                    // Sort: In Progress > To Do > Done
+                    const statusWeight = { 'In Progress': 2, 'To Do': 1, 'Done': 0 }
+                    return (statusWeight[b.status] || 0) - (statusWeight[a.status] || 0)
+                case 'Category':
+                    return a.category.localeCompare(b.category)
+                case 'Title':
+                    return a.title.localeCompare(b.title)
+                default:
+                    return 0
+            }
+        })
+    }, [tasksForSelectedDate, sortBy])
 
     const isSelectedDateBeforeToday = isBefore(selectedDate, startOfToday())
 
@@ -269,18 +303,36 @@ export default function CalendarPage() {
                 {/* Day Details Modal */}
                 <Dialog open={!!viewingDate}>
                     <DialogContent onClose={() => setViewingDate(false)} className="sm:max-w-md bg-white p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
-                        <DialogHeader className="px-6 pt-6 pb-4 border-b border-stone-100">
+                        <DialogHeader className="px-6 pt-6 pb-4 border-b border-stone-100 flex flex-row items-center justify-between">
                             <DialogTitle className="flex items-center gap-3 text-stone-900 font-black text-xl">
                                 <CalendarIcon className="h-6 w-6 text-stone-400" />
                                 {format(selectedDate, 'EEEE, MMMM d')}
                                 {isSelectedDateBeforeToday && <span className="text-[10px] bg-stone-100 text-stone-400 px-2 py-0.5 rounded-full uppercase tracking-widest">Expired</span>}
                             </DialogTitle>
+
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="p-2 hover:bg-stone-100 rounded-full transition-colors outline-none">
+                                        <ListFilter className="h-5 w-5 text-stone-400" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuLabel>Sort Battles By</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuRadioGroup value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                                        <DropdownMenuRadioItem value="Difficulty">Difficulty (Priority)</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="Status">Status</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="Category">Category</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="Title">Alphabetical</DropdownMenuRadioItem>
+                                    </DropdownMenuRadioGroup>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </DialogHeader>
 
                         <div className="p-6 max-h-[60vh] overflow-y-auto">
-                            {tasksForSelectedDate.length > 0 ? (
+                            {sortedTasks.length > 0 ? (
                                 <div className="space-y-3">
-                                    {tasksForSelectedDate.map(task => (
+                                    {sortedTasks.map(task => (
                                         <div
                                             key={task.id}
                                             onClick={() => setViewingTask(task)}

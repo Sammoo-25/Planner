@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import { useGamification } from "@/hooks/use-gamification"
 import { useTaskStore } from "@/hooks/use-tasks"
 import { useQuestManager } from "@/hooks/use-quest-manager"
@@ -11,11 +11,21 @@ import { TaskItem } from "@/components/dashboard/task-item"
 import { EditTaskModal } from "@/components/dashboard/edit-task-modal"
 import { TaskDetailsModal } from "@/components/dashboard/task-details-modal"
 import { Task } from "@/types"
-import { Plus, Sword, ScrollText, Target, Flame, Trophy } from "lucide-react"
+import { Plus, Sword, ScrollText, Target, Flame, Trophy, ListFilter } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useFocus } from "@/context/FocusContext"
 import { getHeroRank } from "@/lib/hero-rank-utils"
 import { XpNotifier } from "@/components/dashboard/xp-notifier"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem
+} from "@/components/ui/dropdown-menu"
 
 
 export default function Dashboard() {
@@ -37,6 +47,30 @@ export default function Dashboard() {
   // Filter Tasks
   const activeTasks = tasks.filter(t => t.status !== "Done")
   const completedTasks = tasks.filter(t => t.status === "Done")
+
+  // Sorting State
+  type SortOption = 'Difficulty' | 'Status' | 'Category' | 'Title'
+  const [sortBy, setSortBy] = useState<SortOption>('Difficulty')
+
+  const sortedActiveTasks = useMemo(() => {
+    return [...activeTasks].sort((a, b) => {
+      switch (sortBy) {
+        case 'Difficulty':
+          const priorityWeight = { 'Critical': 3, 'High': 2, 'Medium': 1, 'Low': 0 }
+          return (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0)
+        case 'Status':
+          // Sort: In Progress > To Do > Done
+          const statusWeight = { 'In Progress': 2, 'To Do': 1, 'Done': 0 }
+          return (statusWeight[b.status] || 0) - (statusWeight[a.status] || 0)
+        case 'Category':
+          return a.category.localeCompare(b.category)
+        case 'Title':
+          return a.title.localeCompare(b.title)
+        default:
+          return 0
+      }
+    })
+  }, [activeTasks, sortBy])
 
   const handleCompleteTask = (id: string) => {
     toggleTaskStatus(id)
@@ -160,15 +194,35 @@ export default function Dashboard() {
                   Active Quests
                 </h2>
               </div>
-              <div className="px-3 py-1.5 rounded-xl bg-stone-100 dark:bg-[#27272a] border border-stone-200 dark:border-white/5 text-[10px] font-black tracking-widest text-stone-500 dark:text-zinc-400 uppercase">
-                {activeTasks.length} CHALLENGES
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="p-2 hover:bg-stone-50 dark:hover:bg-[#27272a] rounded-xl transition-colors outline-none group/sort">
+                      <ListFilter className="h-5 w-5 text-stone-400 group-hover/sort:text-stone-600 dark:group-hover/sort:text-zinc-300 transition-colors" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-[#18181b] border-stone-100 dark:border-white/10">
+                    <DropdownMenuLabel className="dark:text-white">Sort Battles By</DropdownMenuLabel>
+                    <DropdownMenuSeparator className="dark:bg-white/10" />
+                    <DropdownMenuRadioGroup value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                      <DropdownMenuRadioItem value="Difficulty" className="dark:text-zinc-300 dark:focus:bg-[#27272a]">Difficulty (Priority)</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="Status" className="dark:text-zinc-300 dark:focus:bg-[#27272a]">Status</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="Category" className="dark:text-zinc-300 dark:focus:bg-[#27272a]">Category</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="Title" className="dark:text-zinc-300 dark:focus:bg-[#27272a]">Alphabetical</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <div className="px-3 py-1.5 rounded-xl bg-stone-100 dark:bg-[#27272a] border border-stone-200 dark:border-white/5 text-[10px] font-black tracking-widest text-stone-500 dark:text-zinc-400 uppercase">
+                  {activeTasks.length} CHALLENGES
+                </div>
               </div>
             </div>
 
             {/* Scrollable List container */}
             <div className="flex-1 overflow-y-auto p-8 pt-2 custom-scrollbar space-y-3">
               {activeTasks.length > 0 ? (
-                activeTasks.map(task => (
+                sortedActiveTasks.map(task => (
                   <div key={task.id} className="group relative">
                     <div onClick={() => setViewingTask(task)} className="cursor-pointer transform hover:scale-[1.01] transition-transform duration-200">
                       <TaskItem
