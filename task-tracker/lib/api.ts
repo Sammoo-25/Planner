@@ -10,6 +10,7 @@ async function handleResponse(response: Response) {
                     localStorage.removeItem('token');
                     localStorage.removeItem('user');
                     window.location.href = '/signin';
+                    return new Promise(() => {}); // Halt execution to prevent red screen while redirecting
                 }
             }
             throw new Error(data.message || 'API Error');
@@ -18,6 +19,14 @@ async function handleResponse(response: Response) {
     } else {
         const text = await response.text();
         if (!response.ok) {
+            if (response.status === 403 || response.status === 401) {
+                if (typeof window !== 'undefined') {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/signin';
+                    return new Promise(() => {});
+                }
+            }
             throw new Error(text || 'API Error');
         }
         return text;

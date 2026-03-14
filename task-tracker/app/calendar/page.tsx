@@ -157,7 +157,8 @@ export default function CalendarPage() {
     }
 
     return (
-        <div className="flex min-h-screen bg-[#FDFDF9] font-sans text-stone-900">
+        <div className="flex min-h-screen bg-transparent font-sans text-stone-900 transition-colors relative">
+            <div className="relative z-10 flex w-full h-full">
             <Sidebar />
 
             <main className="flex-1 p-6 lg:p-10 flex flex-col h-screen overflow-hidden">
@@ -187,7 +188,7 @@ export default function CalendarPage() {
                 </header>
 
                 {/* Calendar Grid Container */}
-                <div className="flex-1 bg-stone-200/50 rounded-[2rem] p-4 shadow-inner overflow-hidden flex flex-col">
+                <div className="flex-1 bg-white/10 dark:bg-[#18181b]/40 backdrop-blur-3xl rounded-[2.5rem] border border-white/20 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-black/40 p-4 transition-colors duration-500 overflow-hidden flex flex-col">
                     {/* Weekday Headers */}
                     <div className="grid grid-cols-7 mb-4 px-2">
                         {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(day => (
@@ -217,18 +218,18 @@ export default function CalendarPage() {
                                                 className={cn(
                                                     "group relative rounded-3xl p-3 flex flex-col justify-between transition-all duration-300 ease-out cursor-pointer border-2",
                                                     isPast
-                                                        ? "bg-stone-50 border-transparent opacity-60 grayscale hover:opacity-80"
+                                                        ? "bg-white/5 border-transparent opacity-60 grayscale hover:opacity-80"
                                                         : isCurrentMonth
-                                                            ? "bg-white border-transparent shadow-sm hover:shadow-xl hover:scale-[1.05] hover:z-20 hover:border-stone-100"
+                                                            ? "bg-white/20 dark:bg-white/5 backdrop-blur-md border-transparent shadow-sm hover:shadow-xl hover:scale-[1.05] hover:z-20 hover:border-white/40"
                                                             : "bg-transparent border-transparent opacity-50 hover:opacity-100",
-                                                    isToday(day) && "ring-2 ring-offset-2 ring-stone-900 z-10",
+                                                    isToday(day) && "ring-2 ring-offset-2 ring-stone-900 dark:ring-white dark:ring-offset-[#18181b] z-10",
                                                 )}
                                             >
                                                 {/* Date Number */}
                                                 <div className="flex justify-between items-start">
                                                     <span className={cn(
                                                         "text-sm font-black",
-                                                        isToday(day) ? "text-stone-900" : "text-stone-500 group-hover:text-stone-900"
+                                                        isToday(day) ? "text-stone-900 dark:text-white" : "text-stone-600 dark:text-stone-400 group-hover:text-stone-900 dark:group-hover:text-white"
                                                     )}>
                                                         {format(day, 'd')}
                                                     </span>
@@ -436,6 +437,7 @@ export default function CalendarPage() {
                     }}
                 />
             </main>
+            </div>
         </div>
     )
 }

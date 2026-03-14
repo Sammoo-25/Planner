@@ -68,21 +68,22 @@ export default function BoardPage() {
     if (!isLoaded) return null
 
     return (
-        <div className="flex h-screen overflow-hidden bg-sand-100 font-sans text-dark-900 dark:bg-dark-900 transition-colors">
+        <div className="flex h-screen bg-transparent overflow-hidden font-sans text-stone-900 dark:text-zinc-100 transition-colors relative">
+            <div className="relative z-10 flex w-full h-full">
             <Sidebar />
 
             <main className="flex-1 flex flex-col h-full min-w-0 p-8 overflow-hidden">
                 <header className="flex-none mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-4xl font-extrabold tracking-tight text-dark-900 dark:text-white flex items-center gap-3">
-                            <Layout className="h-8 w-8 text-status-normal" />
+                        <h1 className="text-4xl font-extrabold tracking-tight text-stone-900 dark:text-white flex items-center gap-3 drop-shadow-sm">
+                            <Layout className="h-8 w-8 text-blue-500" />
                             Quest Board
                         </h1>
-                        <p className="text-muted text-sm mt-1 dark:text-dark-500">Manage your adventure workflow.</p>
+                        <p className="text-stone-500 font-semibold text-sm mt-1 dark:text-zinc-400">Manage your adventure workflow.</p>
                     </div>
                     <button
                         onClick={() => { setEditingTask(undefined); setIsModalOpen(true); }}
-                        className="flex items-center gap-2 rounded-xl bg-dark-900 px-6 py-3 text-white shadow-lg shadow-dark-900/20 hover:bg-dark-900/90 hover:scale-105 transition-all dark:bg-white dark:text-dark-900 dark:shadow-white/10"
+                        className="flex items-center gap-2 rounded-xl bg-gradient-to-b from-stone-900 to-stone-950 px-6 py-3 text-white shadow-xl shadow-stone-900/20 hover:scale-105 transition-all dark:from-white dark:to-zinc-200 dark:text-stone-900 dark:shadow-white/10"
                     >
                         <Plus className="h-5 w-5" />
                         <span className="font-bold">New Quest</span>
@@ -92,28 +93,28 @@ export default function BoardPage() {
                 <DragDropContext onDragEnd={handleDragEnd}>
                     <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-6">
                         {columns.map((column: any) => (
-                            <div key={column.id} className="flex flex-col min-h-0 bg-white dark:bg-[#18181b] rounded-[2.5rem] border border-stone-100 dark:border-white/5 shadow-2xl shadow-stone-200/50 dark:shadow-black/20 overflow-hidden relative">
-                                <div className="shrink-0 p-6 pb-4 flex items-center justify-between bg-white dark:bg-[#18181b] z-10">
-                                    <div className="flex items-center gap-3 font-black text-sm uppercase tracking-widest text-stone-500 dark:text-zinc-400">
-                                        <div className={cn("p-2 rounded-xl bg-stone-100 dark:bg-white/5", column.color.replace('text-', 'bg-').replace('500', '500/10'))}>
-                                            <column.icon className={cn("h-4 w-4", column.color, column.id === 'In Progress' && "animate-spin")} />
+                            <div key={column.id} className="flex flex-col min-h-0 bg-white/10 dark:bg-[#18181b]/40 backdrop-blur-3xl rounded-[2.5rem] border border-white/20 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-black/40 overflow-hidden relative transition-colors duration-500 hover:border-white/40 dark:hover:border-white/20">
+                                <div className="shrink-0 p-6 pb-4 flex items-center justify-between z-10 border-b border-white/20 dark:border-white/5">
+                                    <div className="flex items-center gap-3 font-black text-sm uppercase tracking-widest text-stone-700 dark:text-zinc-300">
+                                        <div className={cn("p-2 rounded-xl bg-white/30 dark:bg-white/5 shadow-sm border border-white/40 dark:border-white/5", column.color.replace('text-', 'bg-').replace('500', '500/10'))}>
+                                            <column.icon className={cn("h-4 w-4 drop-shadow-sm", column.color, column.id === 'In Progress' && "animate-spin")} />
                                         </div>
                                         {column.title}
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        {column.id === 'Done' && tasks.filter(t => t.status === 'Done').length > 0 && (
+                                        {column.id === 'Done' && tasks.filter((t: Task) => t.status === 'Done').length > 0 && (
                                             <button
                                                 onClick={() => {
-                                                    const doneTasks = tasks.filter(t => t.status === 'Done');
-                                                    doneTasks.forEach(t => removeTask(t.id));
+                                                    const doneTasks = tasks.filter((t: Task) => t.status === 'Done');
+                                                    doneTasks.forEach((t: Task) => removeTask(t.id));
                                                 }}
-                                                className="text-[9px] font-black bg-status-done/10 text-status-done px-2 py-1 rounded-lg hover:bg-status-done hover:text-white transition-all"
+                                                className="text-[9px] font-black bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2.5 py-1.5 rounded-lg hover:bg-emerald-500 hover:text-white transition-all shadow-sm border border-emerald-500/20"
                                                 title="Archive All Victories"
                                             >
                                                 HARVEST
                                             </button>
                                         )}
-                                        <span className="bg-stone-100 dark:bg-[#27272a] border border-stone-200 dark:border-white/5 text-stone-900 dark:text-white px-2.5 py-1 rounded-xl text-[10px] font-black">
+                                        <span className="bg-white/30 dark:bg-[#27272a]/50 border border-white/40 dark:border-white/5 text-stone-900 dark:text-white px-3 py-1.5 rounded-xl text-[10px] font-black shadow-inner">
                                             {tasks.filter((t: Task) => t.status === column.id).length}
                                         </span>
                                     </div>
@@ -125,8 +126,8 @@ export default function BoardPage() {
                                             {...provided.droppableProps}
                                             ref={provided.innerRef}
                                             className={cn(
-                                                "flex-1 overflow-y-auto custom-scrollbar p-4 pt-2 space-y-3",
-                                                snapshot.isDraggingOver ? "bg-stone-50/50 dark:bg-white/5" : ""
+                                                "flex-1 overflow-y-auto custom-scrollbar p-4 pt-4 space-y-4",
+                                                snapshot.isDraggingOver ? "bg-white/10 dark:bg-white/5 backdrop-blur-sm" : ""
                                             )}
                                         >
                                             {tasks.filter((t: Task) => t.status === column.id).map((task: Task, index: number) => (
@@ -157,9 +158,9 @@ export default function BoardPage() {
                                                 </Draggable>
                                             ))}
                                             {provided.placeholder}
-                                            {tasks.filter(t => t.status === column.id).length === 0 && (
-                                                <div className="flex flex-col items-center justify-center py-10 opacity-20 border-2 border-dashed border-dark-400 rounded-3xl">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest">Available Slot</p>
+                                            {tasks.filter((t: Task) => t.status === column.id).length === 0 && (
+                                                <div className="flex flex-col items-center justify-center py-10 opacity-40 border-2 border-dashed border-white/50 dark:border-white/10 rounded-3xl bg-white/5 dark:bg-white/5 mt-2">
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-stone-600 dark:text-zinc-400">Available Slot</p>
                                                 </div>
                                             )}
                                         </div>
@@ -189,6 +190,7 @@ export default function BoardPage() {
                     }}
                 />
             </main>
+            </div>
         </div>
     )
 }

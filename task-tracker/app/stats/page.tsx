@@ -131,7 +131,8 @@ export default function StatsPage() {
     )
 
     return (
-        <div className="flex min-h-screen bg-sand-100 dark:bg-dark-900 font-sans text-dark-900 transition-colors">
+        <div className="flex min-h-screen bg-transparent dark:bg-transparent font-sans text-dark-900 transition-colors relative">
+            <div className="relative z-10 flex w-full h-full">
             <Sidebar />
 
             <main className="flex-1 p-8 overflow-y-auto">
@@ -144,7 +145,7 @@ export default function StatsPage() {
                         <p className="text-dark-500 mt-2 font-medium">Your legend, recorded in eternity.</p>
                     </div>
 
-                    <div className="flex bg-white dark:bg-dark-800 p-1.5 rounded-2xl shadow-sm self-start">
+                    <div className="flex bg-white/20 dark:bg-dark-800/20 backdrop-blur-xl p-1.5 rounded-2xl shadow-sm self-start border border-white/20 dark:border-white/10">
                         {(['7d', '30d', 'all'] as TimeRange[]).map((r) => (
                             <button
                                 key={r}
@@ -153,7 +154,7 @@ export default function StatsPage() {
                                     "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
                                     timeRange === r
                                         ? "bg-dark-900 text-white dark:bg-white dark:text-dark-900 shadow-lg"
-                                        : "text-dark-400 hover:text-dark-900 dark:hover:text-white"
+                                        : "text-dark-600 hover:text-dark-900 dark:text-dark-300 dark:hover:text-white"
                                 )}
                             >
                                 {r}
@@ -170,7 +171,7 @@ export default function StatsPage() {
                         { label: "Battles Won", value: completedTasksInRange.length, icon: Swords, color: "text-red-500", detail: `In this era` },
                         { label: "Survival Rate", value: `${successRate}%`, icon: Zap, color: "text-emerald-500", detail: "Quest Success" }
                     ].map((m, i) => (
-                        <div key={i} className="card-premium p-6 flex flex-col justify-between group hover:scale-[1.02] transition-all">
+                        <div key={i} className="card-premium p-6 flex flex-col justify-between group hover:scale-[1.02] transition-all bg-white/20 dark:bg-dark-800/20 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl">
                             <div className="flex justify-between items-start mb-4">
                                 <div className={cn("p-3 rounded-2xl bg-sand-50 dark:bg-dark-700/50", m.color)}>
                                     <m.icon className="h-6 w-6" />
@@ -189,7 +190,7 @@ export default function StatsPage() {
 
                 <div className="grid gap-6 lg:grid-cols-3 mb-10">
                     {/* Tactical Execution Flow */}
-                    <div className="lg:col-span-2 relative overflow-hidden rounded-[2rem] border border-sand-200 dark:border-dark-700 shadow-2xl bg-white dark:bg-dark-800/50 backdrop-blur-xl h-[450px] min-w-0 group">
+                    <div className="lg:col-span-2 relative overflow-hidden rounded-[2rem] border border-white/20 dark:border-white/10 shadow-2xl bg-white/20 dark:bg-dark-800/20 backdrop-blur-3xl h-[450px] min-w-0 group">
                         {/* Decorative Background Blurs */}
                         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
                         <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -ml-32 -mb-32 pointer-events-none" />
@@ -284,7 +285,7 @@ export default function StatsPage() {
                     </div>
 
                     {/* Attribute Radar */}
-                    <div className="card-premium p-8 flex flex-col h-[450px] min-w-0">
+                    <div className="card-premium p-8 flex flex-col h-[450px] min-w-0 bg-white/20 dark:bg-dark-800/20 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl">
                         <h3 className="text-xl font-bold mb-6 text-dark-900 dark:text-white text-center">Hero's Core Potential</h3>
                         <div className="flex-1 min-h-[300px]">
                             <ResponsiveContainer width="100%" height="100%">
@@ -303,7 +304,7 @@ export default function StatsPage() {
 
                 <div className="grid gap-6 lg:grid-cols-3">
                     {/* Productivity Heatmap */}
-                    <div className="lg:col-span-2 card-premium p-8">
+                    <div className="lg:col-span-2 card-premium p-8 bg-white/20 dark:bg-dark-800/20 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl">
                         <h3 className="text-xl font-bold mb-6 flex items-center gap-2 dark:text-white">
                             <CalendarDays className="h-5 w-5 text-green-500" />
                             Daily Battle Intensity
@@ -336,7 +337,7 @@ export default function StatsPage() {
                     </div>
 
                     {/* Peak Hour */}
-                    <div className="card-premium p-8 h-full">
+                    <div className="card-premium p-8 h-full bg-white/20 dark:bg-dark-800/20 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl">
                         <h3 className="text-xl font-bold mb-6 flex items-center gap-2 dark:text-white">
                             <Zap className="h-5 w-5 text-yellow-500" />
                             The Golden Hour
@@ -366,7 +367,7 @@ export default function StatsPage() {
                             <div
                                 key={a.id}
                                 className={cn(
-                                    "card-premium p-6 border-0 flex flex-col items-center text-center transition-all",
+                                    "card-premium p-6 border-0 flex flex-col items-center text-center transition-all bg-white/20 dark:bg-dark-800/20 backdrop-blur-xl shadow-xl border-white/20 dark:border-white/10 border",
                                     a.unlocked ? "opacity-100 hover:scale-105" : "opacity-30 grayscale saturate-0"
                                 )}
                             >
@@ -386,6 +387,7 @@ export default function StatsPage() {
                     </div>
                 </div>
             </main>
+            </div>
         </div>
     )
 }

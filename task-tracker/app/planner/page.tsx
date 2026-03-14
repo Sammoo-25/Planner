@@ -121,7 +121,8 @@ export default function PlannerPage() {
     if (!isLoaded) return null
 
     return (
-        <div className="flex h-screen bg-[#FDFDF9] font-sans text-stone-900 overflow-hidden">
+        <div className="flex h-screen bg-transparent font-sans text-stone-900 transition-colors overflow-hidden relative">
+            <div className="relative z-10 flex w-full h-full">
             <Sidebar />
 
             <main className="flex-1 flex flex-col h-full min-w-0">
@@ -134,14 +135,14 @@ export default function PlannerPage() {
                         </div>
 
                         {/* Current Date Display */}
-                        <div className="hidden md:flex items-center gap-2 bg-white px-4 py-2 rounded-2xl shadow-sm border border-stone-100">
-                            <CalendarIcon className="h-4 w-4 text-stone-400" />
-                            <span className="font-bold text-stone-700">{format(currentDate, 'EEEE, MMM do')}</span>
+                        <div className="hidden md:flex items-center gap-2 bg-white/20 dark:bg-black/20 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm border border-white/20 dark:border-white/10">
+                            <CalendarIcon className="h-4 w-4 text-stone-600 dark:text-stone-400" />
+                            <span className="font-bold text-stone-800 dark:text-stone-200">{format(currentDate, 'EEEE, MMM do')}</span>
                         </div>
                     </div>
 
                     {/* Weekly Strip */}
-                    <div className="flex items-center justify-between bg-white p-2 rounded-2xl shadow-sm border border-stone-100">
+                    <div className="flex items-center justify-between bg-white/10 dark:bg-black/20 backdrop-blur-3xl p-2 rounded-2xl shadow-sm border border-white/20 dark:border-white/10">
                         <button onClick={() => setCurrentDate(subDays(currentDate, 7))} className="p-2 hover:bg-stone-50 rounded-xl text-stone-400 hover:text-stone-600 transition-colors">
                             <ChevronLeft className="h-5 w-5" />
                         </button>
@@ -179,7 +180,7 @@ export default function PlannerPage() {
                     <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-8 pt-2 overflow-hidden min-h-0">
 
                         {/* COLUMN 1: TIMELINE (Scrollable) */}
-                        <div className="lg:col-span-5 flex flex-col min-h-0 bg-white rounded-[2.5rem] shadow-xl shadow-stone-200/50 border border-white">
+                        <div className="lg:col-span-5 flex flex-col min-h-0 bg-white/10 dark:bg-black/20 backdrop-blur-3xl rounded-[2.5rem] shadow-xl shadow-stone-200/50 dark:shadow-black/40 border border-white/20 dark:border-white/10">
                             {/* Header */}
                             <div className="p-6 pb-2 shrink-0 flex items-center justify-between">
                                 <h3 className="font-black text-lg text-stone-800 flex items-center gap-2">
@@ -236,7 +237,7 @@ export default function PlannerPage() {
                                                             <div className="absolute inset-0 z-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                                                 <button
                                                                     onClick={() => handleAddTimeBlock(hour)}
-                                                                    className="bg-stone-900 text-white p-1.5 rounded-xl shadow-lg transform hover:scale-110 active:scale-95 transition-all pointer-events-auto"
+                                                                    className="bg-stone-900 border border-white/20 dark:border-white/10 text-white p-1.5 rounded-xl shadow-lg transform hover:scale-110 active:scale-95 transition-all pointer-events-auto"
                                                                 >
                                                                     <Plus className="h-4 w-4" />
                                                                 </button>
@@ -345,26 +346,26 @@ export default function PlannerPage() {
                                     </div>
                                 </div>
 
-                                <div className="bg-white rounded-[2rem] p-6 border border-stone-100 shadow-sm overflow-y-auto no-scrollbar">
-                                    <h3 className="font-bold text-stone-400 uppercase tracking-widest text-xs mb-4">Top Priorities</h3>
+                                <div className="bg-white/10 dark:bg-black/20 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-sm overflow-y-auto no-scrollbar">
+                                    <h3 className="font-bold text-stone-500 uppercase tracking-widest text-xs mb-4">Top Priorities</h3>
                                     <div className="space-y-3">
                                         {topPriorities.length > 0 ? topPriorities.map(task => (
                                             <div key={task.id} onClick={() => handleEditTask(task)} className="flex items-center gap-3 cursor-pointer group">
                                                 <div className={cn("h-2 w-2 rounded-full shrink-0",
                                                     task.priority === 'Critical' ? "bg-red-500" : "bg-orange-500"
                                                 )} />
-                                                <span className="font-bold text-stone-700 truncate group-hover:text-stone-900 transition-colors">{task.title}</span>
+                                                <span className="font-bold text-stone-700 dark:text-stone-300 truncate group-hover:text-stone-900 dark:group-hover:text-white transition-colors">{task.title}</span>
                                             </div>
                                         )) : (
-                                            <p className="text-stone-300 font-bold italic text-sm">No priorities set.</p>
+                                            <p className="text-stone-400 font-bold italic text-sm">No priorities set.</p>
                                         )}
                                     </div>
                                 </div>
                             </div>
 
                             {/* Unscheduled Inbox */}
-                            <div className="flex-1 bg-white rounded-[2.5rem] shadow-xl shadow-stone-100 border border-stone-100 flex flex-col overflow-hidden">
-                                <div className="p-6 border-b border-stone-50 flex items-center justify-between shrink-0">
+                            <div className="flex-1 bg-white/10 dark:bg-black/20 backdrop-blur-3xl rounded-[2.5rem] shadow-xl shadow-stone-100 dark:shadow-black/40 border border-white/20 dark:border-white/10 flex flex-col overflow-hidden">
+                                <div className="p-6 border-b border-white/10 flex items-center justify-between shrink-0">
                                     <h3 className="font-black text-lg text-stone-800 flex items-center gap-2">
                                         <Zap className="h-5 w-5 text-yellow-500 fill-yellow-500" />
                                         Quest Inbox
@@ -462,6 +463,7 @@ export default function PlannerPage() {
                     onDelete={removeTask}
                 />
             </main>
+            </div>
         </div>
     )
 }

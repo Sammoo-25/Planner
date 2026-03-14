@@ -30,7 +30,8 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="flex min-h-screen bg-sand-100 font-sans text-dark-900">
+        <div className="flex min-h-screen bg-transparent font-sans text-dark-900 transition-colors relative">
+            <div className="relative z-10 flex w-full h-full">
             <Sidebar />
 
             <main className="flex-1 p-8">
@@ -138,7 +139,7 @@ export default function SettingsPage() {
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className="border-none shadow-xl bg-white/20 dark:bg-dark-800/20 backdrop-blur-3xl">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <RefreshCw className="h-5 w-5" />
@@ -163,7 +164,7 @@ export default function SettingsPage() {
                         </CardContent>
                     </Card>
 
-                    <Card className="opacity-60">
+                    <Card className="opacity-60 border-none shadow-xl bg-white/20 dark:bg-dark-800/20 backdrop-blur-3xl">
                         <CardHeader>
                             <CardTitle>Account</CardTitle>
                         </CardHeader>
@@ -174,6 +175,7 @@ export default function SettingsPage() {
                     </Card>
                 </div>
             </main>
+            </div>
         </div>
     )
 }
