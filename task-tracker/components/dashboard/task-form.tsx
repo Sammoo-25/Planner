@@ -295,7 +295,7 @@ export function TaskForm({ task, onSave, onDelete, onCancel }: Props) {
                     </button>
                     <button
                         type="submit"
-                        className="flex items-center gap-2 bg-dark-900 text-white px-6 py-2 rounded-lg font-bold shadow-lg shadow-dark-900/20 hover:bg-dark-800 hover:scale-105 transition-all dark:bg-white dark:text-dark-900"
+                        className="flex items-center gap-2 bg-dark-900 text-white px-6 py-2 rounded-lg font-bold shadow-lg shadow-dark-900/20 hover:bg-dark-800 hover:scale-105 transition-all dark:bg-white dark:text-dark-900 dark:hover:bg-sand-200"
                     >
                         <Save className="h-4 w-4" /> Save Quest
                     </button>

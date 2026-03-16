@@ -32,10 +32,21 @@ const authenticateToken = (req, res, next) => {
 
     if (!token) return res.status(401).json({ message: "No token provided" });
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
         if (err) return res.status(403).json({ message: "Invalid token" });
-        req.user = user;
-        next();
+        
+        try {
+            // Verify user actually still exists in DB
+            const userCheck = await db.query('SELECT id FROM users WHERE id = $1', [user.userId]);
+            if (userCheck.rowCount === 0) {
+                return res.status(401).json({ message: "User account no longer exists." });
+            }
+            req.user = user;
+            next();
+        } catch (dbErr) {
+            console.error(dbErr);
+            return res.status(500).json({ message: "Server error during authentication" });
+        }
     });
 };
 

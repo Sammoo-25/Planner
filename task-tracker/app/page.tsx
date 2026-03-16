@@ -172,11 +172,10 @@ export default function Dashboard() {
                   setEditingTask(undefined);
                   setIsModalOpen(true);
                 }}
-                className="group relative flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-b from-stone-900 to-stone-950 dark:from-white dark:to-zinc-200 text-white dark:text-stone-950 px-8 py-4 font-black shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] dark:shadow-[0_10px_40px_-10px_rgba(255,255,255,0.3)] hover:scale-[1.02] active:scale-95 transition-all duration-300 overflow-hidden w-full sm:w-auto"
+                className="group flex items-center justify-center gap-3 rounded-2xl bg-stone-900 hover:bg-stone-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-stone-900 px-8 py-4 font-black shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] dark:shadow-[0_10px_40px_-10px_rgba(255,255,255,0.3)] hover:scale-105 active:scale-95 transition-all duration-300 w-full sm:w-auto"
               >
-                <div className="absolute inset-0 bg-white/20 dark:bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <Plus className="h-5 w-5 group-hover:rotate-180 transition-transform duration-500 relative z-10" />
-                <span className="text-sm tracking-widest uppercase relative z-10">Forge Quest</span>
+                <Plus className="h-5 w-5 group-hover:rotate-180 transition-transform duration-500" />
+                <span className="text-sm tracking-widest uppercase">Forge Quest</span>
               </button>
               <button
                 onClick={() => document.getElementById('xp-tome')?.scrollIntoView({ behavior: 'smooth' })}

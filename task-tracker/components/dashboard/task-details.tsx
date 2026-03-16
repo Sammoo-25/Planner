@@ -92,7 +92,7 @@ export function TaskDetails({ task, onClose, onEdit }: Props) {
                 {onEdit && (
                     <button
                         onClick={() => onEdit(task)}
-                        className="flex-1 px-4 py-2.5 rounded-xl bg-dark-900 text-white font-bold hover:bg-dark-800 dark:bg-white dark:text-dark-900 shadow-lg shadow-dark-900/10 transition-transform hover:scale-[1.02]"
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-dark-900 text-white font-bold hover:bg-dark-800 dark:bg-white dark:text-dark-900 dark:hover:bg-sand-200 shadow-lg shadow-dark-900/10 transition-transform hover:scale-[1.02]"
                     >
                         Edit Quest
                     </button>

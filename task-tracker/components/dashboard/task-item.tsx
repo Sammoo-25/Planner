@@ -49,7 +49,7 @@ export function TaskItem({ task, onComplete, onEdit }: Props) {
                             ? "border-emerald-500 bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]"
                             : isInProgress
                                 ? "border-blue-500 text-blue-600 bg-blue-50 dark:bg-blue-500/20 dark:text-blue-400 hover:scale-110"
-                                : "border-stone-300 text-stone-300 hover:border-blue-400 hover:text-blue-400 hover:scale-110 hover:shadow-[0_0_15px_rgba(96,165,250,0.3)] dark:border-zinc-700 dark:text-zinc-600 dark:hover:border-zinc-400"
+                                : "border-stone-300 text-stone-300 hover:border-blue-400 hover:text-blue-400 hover:scale-110 hover:shadow-[0_0_15px_rgba(96,165,250,0.3)] dark:border-zinc-700 dark:text-zinc-600 dark:hover:border-blue-400 dark:hover:text-blue-400"
                     )}
                 >
                     {isDone && (

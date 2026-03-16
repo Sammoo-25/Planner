@@ -168,25 +168,13 @@ textarea:focus {
 .dark input,
 .dark select,
 .dark textarea {
-  background-color: var(--dark-900) !important;
+  background-color: var(--dark-900);
   border-color: var(--dark-700);
-  color: #ffffff !important;
+  color: #ffffff;
 }
 
 /* Text & Colors */
-.dark p,
-.dark span,
-.dark div {
-  color: #cbd5e1;
-  /* Slate 300 */
-}
-
-.dark h1,
-.dark h2,
-.dark h3,
-.dark h4 {
-  color: #f8fafc;
-}
+/* (Text colors now inherit naturally from body, allowing full control with Tailwind utilities) */
 
 /* Dragon/Hero Navigation Items */
 .sidebar-item-active {

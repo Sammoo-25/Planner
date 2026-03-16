@@ -303,12 +303,12 @@ export default function CalendarPage() {
 
                 {/* Day Details Modal */}
                 <Dialog open={!!viewingDate}>
-                    <DialogContent onClose={() => setViewingDate(false)} className="sm:max-w-md bg-white p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
-                        <DialogHeader className="px-6 pt-6 pb-4 border-b border-stone-100 flex flex-row items-center justify-between">
-                            <DialogTitle className="flex items-center gap-3 text-stone-900 font-black text-xl">
-                                <CalendarIcon className="h-6 w-6 text-stone-400" />
+                    <DialogContent onClose={() => setViewingDate(false)} className="sm:max-w-md bg-white dark:bg-[#18181b] p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
+                        <DialogHeader className="px-6 pt-6 pb-4 border-b border-stone-100 dark:border-white/10 flex flex-row items-center justify-between">
+                            <DialogTitle className="flex items-center gap-3 text-stone-900 dark:text-white font-black text-xl">
+                                <CalendarIcon className="h-6 w-6 text-stone-400 dark:text-stone-500" />
                                 {format(selectedDate, 'EEEE, MMMM d')}
-                                {isSelectedDateBeforeToday && <span className="text-[10px] bg-stone-100 text-stone-400 px-2 py-0.5 rounded-full uppercase tracking-widest">Expired</span>}
+                                {isSelectedDateBeforeToday && <span className="text-[10px] bg-stone-100 dark:bg-white/10 text-stone-400 dark:text-stone-500 px-2 py-0.5 rounded-full uppercase tracking-widest">Expired</span>}
                             </DialogTitle>
 
                             <DropdownMenu>
@@ -337,7 +337,7 @@ export default function CalendarPage() {
                                         <div
                                             key={task.id}
                                             onClick={() => setViewingTask(task)}
-                                            className="group flex items-center justify-between p-4 rounded-2xl border border-stone-100 bg-stone-50/50 hover:bg-stone-50 hover:border-stone-200 transition-all cursor-pointer"
+                                            className="group flex items-center justify-between p-4 rounded-2xl border border-stone-100 dark:border-white/5 bg-stone-50/50 dark:bg-white/5 hover:bg-stone-50 dark:hover:bg-white/10 hover:border-stone-200 dark:hover:border-white/10 transition-all cursor-pointer"
                                         >
                                             <div className="flex items-center gap-4">
                                                 <button
@@ -361,10 +361,10 @@ export default function CalendarPage() {
                                                     }}
                                                     className={cn(
                                                         "h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all duration-300",
-                                                        isSelectedDateBeforeToday ? "opacity-50 cursor-not-allowed border-stone-200 bg-stone-100 text-stone-300" :
-                                                            task.status === 'Done' ? "bg-green-500 border-green-500 scale-110 shadow-lg shadow-green-200" :
-                                                                task.status === 'In Progress' ? "bg-blue-100 border-blue-500 text-blue-500 scale-105 shadow-md shadow-blue-100" :
-                                                                    "bg-transparent border-stone-300 text-stone-300 hover:border-stone-400 hover:text-stone-400 hover:bg-stone-50"
+                                                        isSelectedDateBeforeToday ? "opacity-50 cursor-not-allowed border-stone-200 dark:border-white/10 bg-stone-100 dark:bg-white/5 text-stone-300 dark:text-stone-500" :
+                                                            task.status === 'Done' ? "bg-green-500 border-green-500 scale-110 shadow-lg shadow-green-200 dark:shadow-green-900/50" :
+                                                                task.status === 'In Progress' ? "bg-blue-100 dark:bg-blue-500/20 border-blue-500 text-blue-500 scale-105 shadow-md shadow-blue-100 dark:shadow-blue-900/30" :
+                                                                    "bg-transparent border-stone-300 dark:border-stone-600 text-stone-300 dark:text-stone-600 hover:border-stone-400 dark:hover:border-stone-500 hover:text-stone-400 dark:hover:text-stone-500 hover:bg-stone-50 dark:hover:bg-white/5"
                                                     )}
                                                 >
                                                     {task.status === 'Done' && <CheckCircle2 className="h-4 w-4 text-white" />}
@@ -372,7 +372,7 @@ export default function CalendarPage() {
                                                     {task.status === 'To Do' && <Circle className="h-4 w-4" />}
                                                 </button>
                                                 <div>
-                                                    <p className={cn("font-extrabold text-stone-900 text-base", task.status === 'Done' ? "line-through opacity-40" : "")}>{task.title}</p>
+                                                    <p className={cn("font-extrabold text-stone-900 dark:text-stone-100 text-base", task.status === 'Done' ? "line-through opacity-40" : "")}>{task.title}</p>
                                                     <div className="flex items-center gap-2 mt-0.5">
                                                         <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">{task.category}</span>
                                                         <span className="text-stone-300">•</span>
@@ -397,17 +397,17 @@ export default function CalendarPage() {
                             )}
                         </div>
 
-                        <div className="p-6 border-t border-stone-100 flex gap-3">
+                        <div className="p-6 border-t border-stone-100 dark:border-white/10 flex gap-3">
                             <button
                                 onClick={() => setViewingDate(false)}
-                                className="flex-1 px-4 py-3 rounded-2xl border border-stone-200 bg-white text-stone-500 font-bold hover:bg-stone-50 transition-colors"
+                                className="flex-1 px-4 py-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#18181b] text-stone-500 dark:text-stone-400 font-bold hover:bg-stone-50 dark:hover:bg-white/5 transition-colors"
                             >
                                 Close
                             </button>
                             {!isSelectedDateBeforeToday && (
                                 <button
                                     onClick={() => handleAddNewForDate()}
-                                    className="flex-1 px-4 py-3 rounded-2xl bg-stone-900 text-white font-bold hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
+                                    className="flex-1 px-4 py-3 rounded-2xl bg-stone-900 dark:bg-white text-white dark:text-stone-900 font-bold hover:bg-stone-800 dark:hover:bg-stone-200 transition-colors flex items-center justify-center gap-2"
                                 >
                                     <Plus className="h-4 w-4" />
                                     Add Quest

@@ -83,7 +83,7 @@ export default function BoardPage() {
                     </div>
                     <button
                         onClick={() => { setEditingTask(undefined); setIsModalOpen(true); }}
-                        className="flex items-center gap-2 rounded-xl bg-gradient-to-b from-stone-900 to-stone-950 px-6 py-3 text-white shadow-xl shadow-stone-900/20 hover:scale-105 transition-all dark:from-white dark:to-zinc-200 dark:text-stone-900 dark:shadow-white/10"
+                        className="flex items-center gap-2 rounded-xl bg-stone-900 hover:bg-stone-800 dark:bg-white dark:hover:bg-zinc-200 px-6 py-3 text-white dark:text-stone-900 shadow-xl shadow-stone-900/20 dark:shadow-white/10 hover:scale-105 transition-all"
                     >
                         <Plus className="h-5 w-5" />
                         <span className="font-bold">New Quest</span>
@@ -93,7 +93,10 @@ export default function BoardPage() {
                 <DragDropContext onDragEnd={handleDragEnd}>
                     <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-6">
                         {columns.map((column: any) => (
-                            <div key={column.id} className="flex flex-col min-h-0 bg-white/10 dark:bg-[#18181b]/40 backdrop-blur-3xl rounded-[2.5rem] border border-white/20 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-black/40 overflow-hidden relative transition-colors duration-500 hover:border-white/40 dark:hover:border-white/20">
+                            <div key={column.id} className="group relative flex flex-col min-h-0 rounded-[2.5rem] transition-colors duration-500">
+                                {/* The glass backdrop is moved to a sibling to prevent containing-block trapping of dragged fixed items */}
+                                <div className="absolute inset-x-0 inset-y-0 rounded-[2.5rem] bg-white/10 dark:bg-[#18181b]/40 backdrop-blur-3xl border border-white/20 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-black/40 -z-10 pointer-events-none transition-colors duration-500 group-hover:border-white/40 dark:group-hover:border-white/20" />
+                                
                                 <div className="shrink-0 p-6 pb-4 flex items-center justify-between z-10 border-b border-white/20 dark:border-white/5">
                                     <div className="flex items-center gap-3 font-black text-sm uppercase tracking-widest text-stone-700 dark:text-zinc-300">
                                         <div className={cn("p-2 rounded-xl bg-white/30 dark:bg-white/5 shadow-sm border border-white/40 dark:border-white/5", column.color.replace('text-', 'bg-').replace('500', '500/10'))}>
@@ -126,7 +129,7 @@ export default function BoardPage() {
                                             {...provided.droppableProps}
                                             ref={provided.innerRef}
                                             className={cn(
-                                                "flex-1 overflow-y-auto custom-scrollbar p-4 pt-4 space-y-4",
+                                                "flex-1 overflow-y-auto custom-scrollbar p-4 pt-4 space-y-4 rounded-b-[2.5rem]",
                                                 snapshot.isDraggingOver ? "bg-white/10 dark:bg-white/5 backdrop-blur-sm" : ""
                                             )}
                                         >
