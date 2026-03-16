@@ -1,4 +1,15 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5005/api';
+const getApiUrl = () => {
+    const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5005/api';
+    // Remove trailing slash if present
+    let url = rawUrl.replace(/\/$/, '');
+    // Ensure it ends with /api
+    if (!url.endsWith('/api')) {
+        url += '/api';
+    }
+    return url;
+};
+
+const API_URL = getApiUrl();
 
 async function handleResponse(response: Response) {
     const contentType = response.headers.get("content-type");
