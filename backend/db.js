@@ -2,29 +2,24 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: 'postgres', // Start with default database
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
+  connectionString: process.env.DATABASE_URL || `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/postgres`,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
 const initializeDB = async () => {
   try {
-    // Check if 'planer' database exists
-    const res = await pool.query("SELECT 1 FROM pg_database WHERE datname = 'planer'");
-    if (res.rowCount === 0) {
-      console.log("Creating database 'planer'...");
-      await pool.query("CREATE DATABASE planer");
+    // For local development where we might need to create the 'planer' DB
+    if (!process.env.DATABASE_URL) {
+      const res = await pool.query("SELECT 1 FROM pg_database WHERE datname = 'planer'");
+      if (res.rowCount === 0) {
+        console.log("Creating database 'planer'...");
+        await pool.query("CREATE DATABASE planer");
+      }
     }
 
-    // Connect to 'planer' database
     const planerPool = new Pool({
-      user: process.env.DB_USER,
-      host: process.env.DB_HOST,
-      database: process.env.DB_NAME,
-      password: process.env.DB_PASSWORD,
-      port: process.env.DB_PORT,
+      connectionString: process.env.DATABASE_URL || `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
+      ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
     });
 
     // Create users table
