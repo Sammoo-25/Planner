@@ -7,7 +7,6 @@ import { useQuestManager } from "@/hooks/use-quest-manager"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { EditTaskModal } from "@/components/dashboard/edit-task-modal"
 import { TaskDetailsModal } from "@/components/dashboard/task-details-modal"
-import { Card } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
     Tooltip,
@@ -18,7 +17,6 @@ import {
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
@@ -44,39 +42,39 @@ import { toZonedTime } from "date-fns-tz"
 import { cn } from "@/lib/utils"
 import { Task } from "@/types"
 
+type SortOption = 'Difficulty' | 'Status' | 'Category' | 'Title'
+
+const PRIORITY_DOT: Record<string, string> = {
+    Critical: 'bg-rose-500',
+    High:     'bg-orange-500',
+    Medium:   'bg-indigo-500',
+    Low:      'bg-slate-400',
+}
+
 export default function CalendarPage() {
     const { tasks, updateTask, addTask, removeTask } = useTaskStore()
     const { timeZone } = useSettingsStore()
-    const { saveQuest } = useQuestManager()
+    const { saveQuest, awardTaskXp } = useQuestManager()
 
-    // Initialize with zoned time
     const [currentDate, setCurrentDate] = useState(() => toZonedTime(new Date(), timeZone))
     const [selectedDate, setSelectedDate] = useState(() => toZonedTime(new Date(), timeZone))
 
-    // Update dates when timeZone changes
     useEffect(() => {
         const zonedNow = toZonedTime(new Date(), timeZone)
         setCurrentDate(zonedNow)
         setSelectedDate(zonedNow)
     }, [timeZone])
 
-    // Modal State
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [viewingDate, setViewingDate] = useState(false)
     const [editingTask, setEditingTask] = useState<Task | undefined>(undefined)
     const [viewingTask, setViewingTask] = useState<Task | undefined>(undefined)
-
-    // Sorting State
-    type SortOption = 'Difficulty' | 'Status' | 'Category' | 'Title'
     const [sortBy, setSortBy] = useState<SortOption>('Difficulty')
 
-    // Calendar Math
     const monthStart = startOfMonth(currentDate)
     const monthEnd = endOfMonth(currentDate)
     const startDate = startOfWeek(monthStart)
     const endDate = endOfWeek(monthEnd)
-
-    // Create the full grid of days including padding days from prev/next months
     const calendarDays = eachDayOfInterval({ start: startDate, end: endDate })
 
     const tasksByDate = useMemo(() => {
@@ -95,35 +93,29 @@ export default function CalendarPage() {
     const sortedTasks = useMemo(() => {
         return [...tasksForSelectedDate].sort((a, b) => {
             switch (sortBy) {
-                case 'Difficulty':
-                    const priorityWeight = { 'Critical': 3, 'High': 2, 'Medium': 1, 'Low': 0 }
-                    return (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0)
-                case 'Status':
-                    // Sort: In Progress > To Do > Done
-                    const statusWeight = { 'In Progress': 2, 'To Do': 1, 'Done': 0 }
-                    return (statusWeight[b.status] || 0) - (statusWeight[a.status] || 0)
-                case 'Category':
-                    return a.category.localeCompare(b.category)
-                case 'Title':
-                    return a.title.localeCompare(b.title)
-                default:
-                    return 0
+                case 'Difficulty': {
+                    const w = { Critical: 3, High: 2, Medium: 1, Low: 0 } as const
+                    return (w[b.priority] ?? 0) - (w[a.priority] ?? 0)
+                }
+                case 'Status': {
+                    const w = { 'In Progress': 2, 'To Do': 1, 'Done': 0 } as const
+                    return (w[b.status as keyof typeof w] ?? 0) - (w[a.status as keyof typeof w] ?? 0)
+                }
+                case 'Category': return a.category.localeCompare(b.category)
+                case 'Title':    return a.title.localeCompare(b.title)
+                default: return 0
             }
         })
     }, [tasksForSelectedDate, sortBy])
 
     const isSelectedDateBeforeToday = isBefore(selectedDate, startOfToday())
 
-    // Handlers
     const handleAddNewForDate = (date: Date = selectedDate) => {
-        // Double check safety, though button should be hidden
         if (isBefore(date, startOfToday())) return
-
         setEditingTask({
             title: "",
             category: "General",
             priority: "Medium",
-            // Use local date string construction to avoid timezone shifts when defaulting
             deadline: format(date, "yyyy-MM-dd'T'12:00:00"),
             status: "To Do"
         } as Task)
@@ -147,60 +139,50 @@ export default function CalendarPage() {
         setIsModalOpen(false)
     }
 
-    const getPriorityColor = (priority: string) => {
-        switch (priority) {
-            case 'Critical': return 'bg-red-500'
-            case 'High': return 'bg-orange-500'
-            case 'Medium': return 'bg-blue-500'
-            default: return 'bg-slate-400'
-        }
-    }
-
     return (
-        <div className="flex min-h-screen bg-transparent font-sans text-stone-900 transition-colors relative">
-            <div className="relative z-10 flex w-full h-full">
+        <div className="flex h-screen bg-slate-100 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 overflow-hidden">
             <Sidebar />
 
-            <main className="flex-1 p-6 lg:p-10 flex flex-col h-screen overflow-hidden">
-                <header className="mb-6 flex items-center justify-between shrink-0">
+            <main className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
+                {/* Header */}
+                <header className="shrink-0 flex items-center justify-between px-6 py-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
                     <div>
-                        <h1 className="text-3xl font-black text-stone-800 tracking-tight">Plan your battles.</h1>
+                        <h1 className="font-semibold text-slate-900 dark:text-white">Calendar</h1>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">View and manage tasks by date</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <div className="flex items-center bg-stone-900 text-white rounded-xl overflow-hidden shadow-lg p-1">
-                            <button
-                                onClick={() => setCurrentDate(subMonths(currentDate, 1))}
-                                className="p-2 hover:bg-stone-700 rounded-lg transition-colors"
-                            >
-                                <ChevronLeft className="h-5 w-5" />
-                            </button>
-                            <div className="w-40 text-center font-bold text-lg">
-                                {format(currentDate, 'MMMM yyyy')}
-                            </div>
-                            <button
-                                onClick={() => setCurrentDate(addMonths(currentDate, 1))}
-                                className="p-2 hover:bg-stone-700 rounded-lg transition-colors"
-                            >
-                                <ChevronRight className="h-5 w-5" />
-                            </button>
+                    <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 p-0.5">
+                        <button
+                            onClick={() => setCurrentDate(subMonths(currentDate, 1))}
+                            className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-600 dark:text-slate-300"
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        <div className="w-36 text-center font-semibold text-sm text-slate-800 dark:text-slate-100">
+                            {format(currentDate, 'MMMM yyyy')}
                         </div>
+                        <button
+                            onClick={() => setCurrentDate(addMonths(currentDate, 1))}
+                            className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-600 dark:text-slate-300"
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </button>
                     </div>
                 </header>
 
-                {/* Calendar Grid Container */}
-                <div className="flex-1 bg-white/10 dark:bg-[#18181b]/40 backdrop-blur-3xl rounded-[2.5rem] border border-white/20 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-black/40 p-4 transition-colors duration-500 overflow-hidden flex flex-col">
+                {/* Calendar Grid */}
+                <div className="flex-1 bg-white dark:bg-slate-900 m-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden">
                     {/* Weekday Headers */}
-                    <div className="grid grid-cols-7 mb-4 px-2">
-                        {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(day => (
-                            <div key={day} className="text-[10px] font-black tracking-[0.2em] text-stone-400 uppercase pl-3">
+                    <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800">
+                        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                            <div key={day} className="py-2.5 text-center text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                                 {day}
                             </div>
                         ))}
                     </div>
 
                     {/* Days Grid */}
-                    <div className="grid grid-cols-7 grid-rows-5 gap-3 flex-1 min-h-0">
-                        {calendarDays.slice(0, 35).map((day, idx) => { // Force 5 rows for aesthetics or handle dynamic rows
+                    <div className="flex-1 grid grid-cols-7 min-h-0">
+                        {calendarDays.slice(0, 35).map((day) => {
                             const dayId = format(day, 'yyyy-MM-dd')
                             const dayTasks = tasksByDate[dayId] || []
                             const isCurrentMonth = day.getMonth() === currentDate.getMonth()
@@ -208,7 +190,7 @@ export default function CalendarPage() {
 
                             return (
                                 <TooltipProvider key={dayId}>
-                                    <Tooltip delayDuration={0}>
+                                    <Tooltip delayDuration={100}>
                                         <TooltipTrigger asChild>
                                             <div
                                                 onClick={() => {
@@ -216,84 +198,63 @@ export default function CalendarPage() {
                                                     setViewingDate(true)
                                                 }}
                                                 className={cn(
-                                                    "group relative rounded-3xl p-3 flex flex-col justify-between transition-all duration-300 ease-out cursor-pointer border-2",
+                                                    "border-b border-r border-slate-100 dark:border-slate-800 p-2 flex flex-col gap-1 cursor-pointer transition-colors duration-100",
                                                     isPast
-                                                        ? "bg-white/5 border-transparent opacity-60 grayscale hover:opacity-80"
-                                                        : isCurrentMonth
-                                                            ? "bg-white/20 dark:bg-white/5 backdrop-blur-md border-transparent shadow-sm hover:shadow-xl hover:scale-[1.05] hover:z-20 hover:border-white/40"
-                                                            : "bg-transparent border-transparent opacity-50 hover:opacity-100",
-                                                    isToday(day) && "ring-2 ring-offset-2 ring-stone-900 dark:ring-white dark:ring-offset-[#18181b] z-10",
+                                                        ? "opacity-50"
+                                                        : "hover:bg-slate-50 dark:hover:bg-slate-800/60",
+                                                    !isCurrentMonth && "opacity-35",
+                                                    isToday(day) && "bg-indigo-50 dark:bg-indigo-950/30 opacity-100"
                                                 )}
                                             >
-                                                {/* Date Number */}
-                                                <div className="flex justify-between items-start">
-                                                    <span className={cn(
-                                                        "text-sm font-black",
-                                                        isToday(day) ? "text-stone-900 dark:text-white" : "text-stone-600 dark:text-stone-400 group-hover:text-stone-900 dark:group-hover:text-white"
-                                                    )}>
-                                                        {format(day, 'd')}
-                                                    </span>
-                                                    {/* Plus button on hover */}
-                                                    {!isPast && (
-                                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-stone-100 rounded-full p-1">
-                                                            <Plus className="h-3 w-3 text-stone-600" />
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                <span className={cn(
+                                                    "text-sm font-semibold w-6 h-6 flex items-center justify-center rounded-full",
+                                                    isToday(day)
+                                                        ? "bg-indigo-600 text-white"
+                                                        : "text-slate-700 dark:text-slate-300"
+                                                )}>
+                                                    {format(day, 'd')}
+                                                </span>
 
-                                                {/* Visual Indicators (Text/Dots) - UPDATED */}
-                                                <div className="flex-1 flex flex-col gap-1 overflow-hidden mt-1 px-1">
-                                                    {dayTasks.slice(0, 3).map((task) => (
-                                                        <div key={task.id} className="flex items-center gap-1.5 bg-stone-100/50 rounded-sm px-1 py-0.5 max-w-full">
-                                                            <div className={cn("h-1.5 w-1.5 rounded-full shrink-0", getPriorityColor(task.priority))} />
-                                                            <span className="text-[9px] font-bold text-stone-600 truncate leading-none">
+                                                <div className="flex flex-col gap-0.5 overflow-hidden">
+                                                    {dayTasks.slice(0, 2).map((task) => (
+                                                        <div key={task.id} className="flex items-center gap-1 min-w-0">
+                                                            <div className={cn("h-1.5 w-1.5 rounded-full shrink-0", PRIORITY_DOT[task.priority] ?? 'bg-slate-400')} />
+                                                            <span className="text-[10px] text-slate-600 dark:text-slate-400 truncate leading-none font-medium">
                                                                 {task.title}
                                                             </span>
                                                         </div>
                                                     ))}
-                                                    {dayTasks.length > 3 && (
-                                                        <div className="text-[8px] font-bold text-stone-400 pl-1">
-                                                            +{dayTasks.length - 3} more
-                                                        </div>
+                                                    {dayTasks.length > 2 && (
+                                                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium pl-2.5">
+                                                            +{dayTasks.length - 2} more
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>
                                         </TooltipTrigger>
 
-                                        {/* Hover Content */}
-                                        <TooltipContent side="top" className="p-0 border-none bg-transparent shadow-none" sideOffset={15}>
-                                            <div className="min-w-[220px] max-w-[260px] p-4 bg-white rounded-2xl shadow-xl border border-stone-100 animate-in fade-in zoom-in-95 duration-200">
-                                                <div className="mb-3 flex items-center justify-between">
-                                                    <h4 className="font-bold text-sm text-stone-900">
-                                                        {format(day, 'EEEE, MMM do')}
-                                                    </h4>
-                                                    {dayTasks.length > 0 && <span className="text-[10px] font-bold text-stone-400 bg-stone-50 px-2 py-0.5 rounded-full">{dayTasks.length}</span>}
-                                                </div>
-
-                                                {dayTasks.length > 0 ? (
-                                                    <div className="space-y-2">
+                                        {dayTasks.length > 0 && (
+                                            <TooltipContent side="top" className="p-0 border-none bg-transparent shadow-none" sideOffset={8}>
+                                                <div className="min-w-[200px] max-w-[240px] p-3 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <h4 className="font-semibold text-xs text-slate-900 dark:text-white">
+                                                            {format(day, 'EEE, MMM d')}
+                                                        </h4>
+                                                        <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-full">
+                                                            {dayTasks.length}
+                                                        </span>
+                                                    </div>
+                                                    <div className="space-y-1.5">
                                                         {dayTasks.map(task => (
-                                                            <div
-                                                                key={task.id}
-                                                                className="flex items-center gap-3 cursor-pointer hover:opacity-70 transition-opacity"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation()
-                                                                    setViewingTask(task)
-                                                                }}
-                                                            >
-                                                                <div className={cn("h-2 w-2 rounded-full shrink-0", getPriorityColor(task.priority))} />
-                                                                <div className="flex-1 min-w-0 flex flex-col">
-                                                                    <span className="text-xs font-bold text-stone-700 truncate">{task.title}</span>
-                                                                    <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider">{task.category}</span>
-                                                                </div>
+                                                            <div key={task.id} className="flex items-center gap-2">
+                                                                <div className={cn("h-1.5 w-1.5 rounded-full shrink-0", PRIORITY_DOT[task.priority] ?? 'bg-slate-400')} />
+                                                                <span className="text-xs text-slate-700 dark:text-slate-300 truncate">{task.title}</span>
                                                             </div>
                                                         ))}
                                                     </div>
-                                                ) : (
-                                                    <p className="text-[10px] uppercase tracking-widest text-stone-300 font-bold text-center py-2">No active battles</p>
-                                                )}
-                                            </div>
-                                        </TooltipContent>
+                                                </div>
+                                            </TooltipContent>
+                                        )}
                                     </Tooltip>
                                 </TooltipProvider>
                             )
@@ -303,25 +264,32 @@ export default function CalendarPage() {
 
                 {/* Day Details Modal */}
                 <Dialog open={!!viewingDate}>
-                    <DialogContent onClose={() => setViewingDate(false)} className="sm:max-w-md bg-white dark:bg-[#18181b] p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
-                        <DialogHeader className="px-6 pt-6 pb-4 border-b border-stone-100 dark:border-white/10 flex flex-row items-center justify-between">
-                            <DialogTitle className="flex items-center gap-3 text-stone-900 dark:text-white font-black text-xl">
-                                <CalendarIcon className="h-6 w-6 text-stone-400 dark:text-stone-500" />
+                    <DialogContent
+                        onClose={() => setViewingDate(false)}
+                        className="sm:max-w-md bg-white dark:bg-slate-900 p-0 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl"
+                    >
+                        <DialogHeader className="px-6 pt-5 pb-4 border-b border-slate-200 dark:border-slate-700 flex flex-row items-center justify-between">
+                            <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-white font-semibold">
+                                <CalendarIcon className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                                 {format(selectedDate, 'EEEE, MMMM d')}
-                                {isSelectedDateBeforeToday && <span className="text-[10px] bg-stone-100 dark:bg-white/10 text-stone-400 dark:text-stone-500 px-2 py-0.5 rounded-full uppercase tracking-widest">Expired</span>}
+                                {isSelectedDateBeforeToday && (
+                                    <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 px-2 py-0.5 rounded-full uppercase tracking-wider font-medium">
+                                        Past
+                                    </span>
+                                )}
                             </DialogTitle>
 
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <button className="p-2 hover:bg-stone-100 rounded-full transition-colors outline-none">
-                                        <ListFilter className="h-5 w-5 text-stone-400" />
+                                    <button className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors text-slate-400">
+                                        <ListFilter className="h-4 w-4" />
                                     </button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48">
-                                    <DropdownMenuLabel>Sort Battles By</DropdownMenuLabel>
+                                <DropdownMenuContent align="end" className="w-44">
+                                    <DropdownMenuLabel className="text-xs">Sort by</DropdownMenuLabel>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuRadioGroup value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-                                        <DropdownMenuRadioItem value="Difficulty">Difficulty (Priority)</DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem value="Difficulty">Priority</DropdownMenuRadioItem>
                                         <DropdownMenuRadioItem value="Status">Status</DropdownMenuRadioItem>
                                         <DropdownMenuRadioItem value="Category">Category</DropdownMenuRadioItem>
                                         <DropdownMenuRadioItem value="Title">Alphabetical</DropdownMenuRadioItem>
@@ -330,87 +298,89 @@ export default function CalendarPage() {
                             </DropdownMenu>
                         </DialogHeader>
 
-                        <div className="p-6 max-h-[60vh] overflow-y-auto">
+                        <div className="p-5 max-h-[55vh] overflow-y-auto custom-scrollbar">
                             {sortedTasks.length > 0 ? (
-                                <div className="space-y-3">
+                                <div className="space-y-2">
                                     {sortedTasks.map(task => (
                                         <div
                                             key={task.id}
                                             onClick={() => setViewingTask(task)}
-                                            className="group flex items-center justify-between p-4 rounded-2xl border border-stone-100 dark:border-white/5 bg-stone-50/50 dark:bg-white/5 hover:bg-stone-50 dark:hover:bg-white/10 hover:border-stone-200 dark:hover:border-white/10 transition-all cursor-pointer"
+                                            className="group flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600 transition-all cursor-pointer"
                                         >
-                                            <div className="flex items-center gap-4">
-                                                <button
-                                                    disabled={isSelectedDateBeforeToday}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        if (isSelectedDateBeforeToday) return;
+                                            <button
+                                                disabled={isSelectedDateBeforeToday}
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    if (isSelectedDateBeforeToday) return
+                                                    const nextStatus = task.status === 'To Do' ? 'In Progress'
+                                                        : task.status === 'In Progress' ? 'Done'
+                                                            : 'To Do'
+                                                    if (nextStatus === 'Done') awardTaskXp(task)
+                                                    updateTask(task.id, { status: nextStatus })
+                                                }}
+                                                className={cn(
+                                                    "h-7 w-7 rounded-full border-2 flex items-center justify-center transition-all shrink-0",
+                                                    isSelectedDateBeforeToday
+                                                        ? "opacity-40 cursor-not-allowed border-slate-300 dark:border-slate-600"
+                                                        : task.status === 'Done'
+                                                            ? "bg-emerald-500 border-emerald-500 text-white"
+                                                            : task.status === 'In Progress'
+                                                                ? "border-indigo-500 text-indigo-500 bg-indigo-50 dark:bg-indigo-950/30"
+                                                                : "border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500"
+                                                )}
+                                            >
+                                                {task.status === 'Done' && <CheckCircle2 className="h-4 w-4" />}
+                                                {task.status === 'In Progress' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                                                {task.status === 'To Do' && <Circle className="h-3.5 w-3.5 text-slate-300 dark:text-slate-600" />}
+                                            </button>
 
-                                                        const nextStatus = task.status === 'To Do' ? 'In Progress'
-                                                            : task.status === 'In Progress' ? 'Done'
-                                                                : 'To Do'
-
-                                                        // Award XP if completing
-                                                        if (nextStatus === 'Done') {
-                                                            // We might need to call awardTaskXp from useQuestManager if available,
-                                                            // but basic status update is requested here.
-                                                            // The user didn't explicitly ask for XP hook integration here, closely following visual request.
-                                                        }
-
-                                                        updateTask(task.id, { status: nextStatus })
-                                                    }}
-                                                    className={cn(
-                                                        "h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all duration-300",
-                                                        isSelectedDateBeforeToday ? "opacity-50 cursor-not-allowed border-stone-200 dark:border-white/10 bg-stone-100 dark:bg-white/5 text-stone-300 dark:text-stone-500" :
-                                                            task.status === 'Done' ? "bg-green-500 border-green-500 scale-110 shadow-lg shadow-green-200 dark:shadow-green-900/50" :
-                                                                task.status === 'In Progress' ? "bg-blue-100 dark:bg-blue-500/20 border-blue-500 text-blue-500 scale-105 shadow-md shadow-blue-100 dark:shadow-blue-900/30" :
-                                                                    "bg-transparent border-stone-300 dark:border-stone-600 text-stone-300 dark:text-stone-600 hover:border-stone-400 dark:hover:border-stone-500 hover:text-stone-400 dark:hover:text-stone-500 hover:bg-stone-50 dark:hover:bg-white/5"
-                                                    )}
-                                                >
-                                                    {task.status === 'Done' && <CheckCircle2 className="h-4 w-4 text-white" />}
-                                                    {task.status === 'In Progress' && <Loader2 className="h-4 w-4 animate-spin" />}
-                                                    {task.status === 'To Do' && <Circle className="h-4 w-4" />}
-                                                </button>
-                                                <div>
-                                                    <p className={cn("font-extrabold text-stone-900 dark:text-stone-100 text-base", task.status === 'Done' ? "line-through opacity-40" : "")}>{task.title}</p>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-stone-400">{task.category}</span>
-                                                        <span className="text-stone-300">•</span>
-                                                        <span className={cn(
-                                                            "text-[10px] font-black uppercase tracking-widest",
-                                                            task.priority === 'Critical' ? "text-red-500" :
-                                                                task.priority === 'High' ? "text-orange-500" : "text-stone-400"
-                                                        )}>
-                                                            {task.priority}
-                                                        </span>
-                                                    </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className={cn(
+                                                    "text-sm font-medium text-slate-800 dark:text-slate-200 truncate",
+                                                    task.status === 'Done' && "line-through opacity-50"
+                                                )}>
+                                                    {task.title}
+                                                </p>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <span className="text-[11px] text-slate-400 dark:text-slate-500">{task.category}</span>
+                                                    <span className="text-slate-200 dark:text-slate-700">·</span>
+                                                    <span className={cn(
+                                                        "text-[11px] font-medium",
+                                                        task.priority === 'Critical' ? "text-rose-500" :
+                                                            task.priority === 'High' ? "text-orange-500" :
+                                                                "text-slate-400 dark:text-slate-500"
+                                                    )}>
+                                                        {task.priority}
+                                                    </span>
                                                 </div>
                                             </div>
-                                            <ChevronRight className="h-4 w-4 text-stone-300 group-hover:text-stone-900 transition-colors" />
+
+                                            <ChevronRight className="h-4 w-4 text-slate-300 dark:text-slate-600 group-hover:text-slate-500 dark:group-hover:text-slate-400 transition-colors shrink-0" />
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-center py-8">
-                                    <p className="text-stone-400 font-medium">No tasks for this day.</p>
+                                <div className="text-center py-10">
+                                    <CalendarIcon className="h-8 w-8 text-slate-200 dark:text-slate-700 mx-auto mb-3" />
+                                    <p className="text-sm text-slate-400 dark:text-slate-500 font-medium">No tasks for this day</p>
                                 </div>
                             )}
                         </div>
 
-                        <div className="p-6 border-t border-stone-100 dark:border-white/10 flex gap-3">
+                        <div className="px-5 pb-5 pt-4 border-t border-slate-200 dark:border-slate-700 flex gap-2">
                             <button
                                 onClick={() => setViewingDate(false)}
-                                className="flex-1 px-4 py-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#18181b] text-stone-500 dark:text-stone-400 font-bold hover:bg-stone-50 dark:hover:bg-white/5 transition-colors"
+                                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-medium text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                             >
                                 Close
                             </button>
                             {!isSelectedDateBeforeToday && (
                                 <button
                                     onClick={() => handleAddNewForDate()}
-                                    className="flex-1 px-4 py-3 rounded-2xl bg-stone-900 dark:bg-white text-white dark:text-stone-900 font-bold hover:bg-stone-800 dark:hover:bg-stone-200 transition-colors flex items-center justify-center gap-2"
+                                    className="flex-1 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm flex items-center justify-center gap-2 transition-colors"
                                 >
                                     <Plus className="h-4 w-4" />
-                                    Add Quest
+                                    Add Task
                                 </button>
                             )}
                         </div>
@@ -437,7 +407,6 @@ export default function CalendarPage() {
                     }}
                 />
             </main>
-            </div>
         </div>
     )
 }

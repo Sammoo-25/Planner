@@ -1,7 +1,6 @@
 "use client"
 
 import { useTaskStore } from "@/hooks/use-tasks"
-import { useGamification } from "@/hooks/use-gamification"
 import { useQuestManager } from "@/hooks/use-quest-manager"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TaskItem } from "@/components/dashboard/task-item"
@@ -9,43 +8,35 @@ import { EditTaskModal } from "@/components/dashboard/edit-task-modal"
 import { TaskDetailsModal } from "@/components/dashboard/task-details-modal"
 import { Task } from "@/types"
 import { useState } from "react"
-import { Plus, Layout, ListTodo, Loader2, CheckCircle2 } from "lucide-react"
+import { Plus, ListTodo, PlayCircle, CheckCircle2, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd"
 
+const COLUMNS = [
+    { id: 'To Do' as const, label: 'To Do', Icon: ListTodo, color: 'text-slate-500', accent: 'bg-slate-100 dark:bg-slate-800' },
+    { id: 'In Progress' as const, label: 'In Progress', Icon: PlayCircle, color: 'text-indigo-600 dark:text-indigo-400', accent: 'bg-indigo-50 dark:bg-indigo-950/50' },
+    { id: 'Done' as const, label: 'Done', Icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', accent: 'bg-emerald-50 dark:bg-emerald-950/50' },
+]
+
 export default function BoardPage() {
     const { tasks, updateTask, addTask, removeTask, isLoaded } = useTaskStore()
-    const { heal } = useGamification()
     const { toggleTaskStatus, saveQuest, awardTaskXp } = useQuestManager()
 
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingTask, setEditingTask] = useState<Task | undefined>(undefined)
     const [viewingTask, setViewingTask] = useState<Task | undefined>(undefined)
 
-    const columns = [
-        { id: 'To Do', title: 'To Do', icon: ListTodo, color: 'text-slate-500' },
-        { id: 'In Progress', title: 'In Progress', icon: Loader2, color: 'text-blue-500' },
-        { id: 'Done', title: 'Completed', icon: CheckCircle2, color: 'text-green-500' }
-    ]
-
     const handleDragEnd = (result: DropResult) => {
         const { destination, source, draggableId } = result
-
         if (!destination) return
         if (destination.droppableId === source.droppableId && destination.index === source.index) return
 
         const newStatus = destination.droppableId as Task['status']
         const task = tasks.find(t => t.id === draggableId)
-
         if (task && newStatus === 'Done' && task.status !== 'Done') {
             awardTaskXp(task)
         }
-
         updateTask(draggableId, { status: newStatus })
-    }
-
-    const handleCompleteTask = (id: string) => {
-        toggleTaskStatus(id)
     }
 
     const saveTask = (taskData: Partial<Task>) => {
@@ -54,11 +45,11 @@ export default function BoardPage() {
         } else {
             addTask({
                 id: Math.random().toString(),
-                title: taskData.title || "New Quest",
+                title: taskData.title || "New Task",
                 category: taskData.category || "General",
                 priority: taskData.priority || "Medium",
                 deadline: taskData.deadline || new Date().toISOString(),
-                status: "To Do"
+                status: "To Do",
             } as Task)
         }
         setEditingTask(undefined)
@@ -68,109 +59,101 @@ export default function BoardPage() {
     if (!isLoaded) return null
 
     return (
-        <div className="flex h-screen bg-transparent overflow-hidden font-sans text-stone-900 dark:text-zinc-100 transition-colors relative">
-            <div className="relative z-10 flex w-full h-full">
+        <div className="flex h-screen bg-slate-100 dark:bg-slate-950 font-sans overflow-hidden">
             <Sidebar />
 
-            <main className="flex-1 flex flex-col h-full min-w-0 p-8 overflow-hidden">
-                <header className="flex-none mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                {/* Header */}
+                <header className="shrink-0 flex items-center justify-between px-6 py-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
                     <div>
-                        <h1 className="text-4xl font-extrabold tracking-tight text-stone-900 dark:text-white flex items-center gap-3 drop-shadow-sm">
-                            <Layout className="h-8 w-8 text-blue-500" />
-                            Quest Board
-                        </h1>
-                        <p className="text-stone-500 font-semibold text-sm mt-1 dark:text-zinc-400">Manage your adventure workflow.</p>
+                        <h1 className="font-semibold text-slate-900 dark:text-white">Board</h1>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Drag tasks between columns to update status</p>
                     </div>
                     <button
-                        onClick={() => { setEditingTask(undefined); setIsModalOpen(true); }}
-                        className="flex items-center gap-2 rounded-xl bg-stone-900 hover:bg-stone-800 dark:bg-white dark:hover:bg-zinc-200 px-6 py-3 text-white dark:text-stone-900 shadow-xl shadow-stone-900/20 dark:shadow-white/10 hover:scale-105 transition-all"
+                        onClick={() => { setEditingTask(undefined); setIsModalOpen(true) }}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors shadow-sm"
                     >
-                        <Plus className="h-5 w-5" />
-                        <span className="font-bold">New Quest</span>
+                        <Plus className="h-4 w-4" />
+                        New Task
                     </button>
                 </header>
 
+                {/* Board */}
                 <DragDropContext onDragEnd={handleDragEnd}>
-                    <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {columns.map((column: any) => (
-                            <div key={column.id} className="group relative flex flex-col min-h-0 rounded-[2.5rem] transition-colors duration-500">
-                                {/* The glass backdrop is moved to a sibling to prevent containing-block trapping of dragged fixed items */}
-                                <div className="absolute inset-x-0 inset-y-0 rounded-[2.5rem] bg-white/10 dark:bg-[#18181b]/40 backdrop-blur-3xl border border-white/20 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-black/40 -z-10 pointer-events-none transition-colors duration-500 group-hover:border-white/40 dark:group-hover:border-white/20" />
-                                
-                                <div className="shrink-0 p-6 pb-4 flex items-center justify-between z-10 border-b border-white/20 dark:border-white/5">
-                                    <div className="flex items-center gap-3 font-black text-sm uppercase tracking-widest text-stone-700 dark:text-zinc-300">
-                                        <div className={cn("p-2 rounded-xl bg-white/30 dark:bg-white/5 shadow-sm border border-white/40 dark:border-white/5", column.color.replace('text-', 'bg-').replace('500', '500/10'))}>
-                                            <column.icon className={cn("h-4 w-4 drop-shadow-sm", column.color, column.id === 'In Progress' && "animate-spin")} />
+                    <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 gap-4 p-6 overflow-hidden">
+                        {COLUMNS.map(col => {
+                            const colTasks = tasks.filter(t => t.status === col.id)
+                            return (
+                                <div key={col.id} className="flex flex-col min-h-0 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 overflow-hidden">
+                                    {/* Column header */}
+                                    <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800">
+                                        <div className="flex items-center gap-2">
+                                            <div className={cn("h-6 w-6 rounded-md flex items-center justify-center", col.accent)}>
+                                                <col.Icon className={cn("h-3.5 w-3.5", col.color)} />
+                                            </div>
+                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{col.label}</span>
+                                            <span className="text-xs text-slate-400 dark:text-slate-500 font-medium tabular-nums">
+                                                {colTasks.length}
+                                            </span>
                                         </div>
-                                        {column.title}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        {column.id === 'Done' && tasks.filter((t: Task) => t.status === 'Done').length > 0 && (
+                                        {col.id === 'Done' && colTasks.length > 0 && (
                                             <button
-                                                onClick={() => {
-                                                    const doneTasks = tasks.filter((t: Task) => t.status === 'Done');
-                                                    doneTasks.forEach((t: Task) => removeTask(t.id));
-                                                }}
-                                                className="text-[9px] font-black bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-2.5 py-1.5 rounded-lg hover:bg-emerald-500 hover:text-white transition-all shadow-sm border border-emerald-500/20"
-                                                title="Archive All Victories"
+                                                onClick={() => colTasks.forEach(t => removeTask(t.id))}
+                                                className="flex items-center gap-1 text-[11px] font-medium text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors"
+                                                title="Clear completed"
                                             >
-                                                HARVEST
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                                Clear
                                             </button>
                                         )}
-                                        <span className="bg-white/30 dark:bg-[#27272a]/50 border border-white/40 dark:border-white/5 text-stone-900 dark:text-white px-3 py-1.5 rounded-xl text-[10px] font-black shadow-inner">
-                                            {tasks.filter((t: Task) => t.status === column.id).length}
-                                        </span>
                                     </div>
-                                </div>
 
-                                <Droppable droppableId={column.id}>
-                                    {(provided: any, snapshot: any) => (
-                                        <div
-                                            {...provided.droppableProps}
-                                            ref={provided.innerRef}
-                                            className={cn(
-                                                "flex-1 overflow-y-auto custom-scrollbar p-4 pt-4 space-y-4 rounded-b-[2.5rem]",
-                                                snapshot.isDraggingOver ? "bg-white/10 dark:bg-white/5 backdrop-blur-sm" : ""
-                                            )}
-                                        >
-                                            {tasks.filter((t: Task) => t.status === column.id).map((task: Task, index: number) => (
-                                                <Draggable key={task.id} draggableId={task.id} index={index}>
-                                                    {(provided: any, snapshot: any) => (
-                                                        <div
-                                                            ref={provided.innerRef}
-                                                            {...provided.draggableProps}
-                                                            {...provided.dragHandleProps}
-                                                            className={cn(
-                                                                "transition-all duration-300 transform",
-                                                                snapshot.isDragging ? "z-50 scale-105 rotate-2 shadow-2xl" : "rotate-0"
-                                                            )}
-                                                            onClick={() => setViewingTask(task)}
-                                                        >
-                                                            <div className={cn(
-                                                                "pointer-events-none rounded-2xl transition-all duration-500",
-                                                                column.id === 'In Progress' && !snapshot.isDragging && "warzone-glow ring-2 ring-blue-500/10"
-                                                            )}>
+                                    {/* Droppable area */}
+                                    <Droppable droppableId={col.id}>
+                                        {(provided, snapshot) => (
+                                            <div
+                                                {...provided.droppableProps}
+                                                ref={provided.innerRef}
+                                                className={cn(
+                                                    "flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar transition-colors duration-150",
+                                                    snapshot.isDraggingOver && "bg-slate-100 dark:bg-slate-800/60"
+                                                )}
+                                            >
+                                                {colTasks.map((task, index) => (
+                                                    <Draggable key={task.id} draggableId={task.id} index={index}>
+                                                        {(provided, snapshot) => (
+                                                            <div
+                                                                ref={provided.innerRef}
+                                                                {...provided.draggableProps}
+                                                                {...provided.dragHandleProps}
+                                                                className={cn(
+                                                                    "transition-all duration-200",
+                                                                    snapshot.isDragging && "opacity-90 rotate-1 scale-[1.02]"
+                                                                )}
+                                                                onClick={() => setViewingTask(task)}
+                                                            >
                                                                 <TaskItem
                                                                     task={task}
-                                                                    onComplete={(id: string) => handleCompleteTask(id)}
-                                                                    onEdit={(t: Task) => { setEditingTask(t); setIsModalOpen(true); }}
+                                                                    onComplete={toggleTaskStatus}
+                                                                    onEdit={(t) => { setEditingTask(t); setIsModalOpen(true) }}
                                                                 />
                                                             </div>
-                                                        </div>
-                                                    )}
-                                                </Draggable>
-                                            ))}
-                                            {provided.placeholder}
-                                            {tasks.filter((t: Task) => t.status === column.id).length === 0 && (
-                                                <div className="flex flex-col items-center justify-center py-10 opacity-40 border-2 border-dashed border-white/50 dark:border-white/10 rounded-3xl bg-white/5 dark:bg-white/5 mt-2">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-stone-600 dark:text-zinc-400">Available Slot</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </Droppable>
-                            </div>
-                        ))}
+                                                        )}
+                                                    </Draggable>
+                                                ))}
+                                                {provided.placeholder}
+
+                                                {colTasks.length === 0 && (
+                                                    <div className="flex items-center justify-center py-10 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
+                                                        <span className="text-xs text-slate-400 dark:text-slate-600">Drop tasks here</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </Droppable>
+                                </div>
+                            )
+                        })}
                     </div>
                 </DragDropContext>
 
@@ -181,7 +164,6 @@ export default function BoardPage() {
                     onSave={saveTask}
                     onDelete={removeTask}
                 />
-
                 <TaskDetailsModal
                     open={!!viewingTask}
                     onClose={() => setViewingTask(undefined)}
@@ -192,7 +174,6 @@ export default function BoardPage() {
                         setIsModalOpen(true)
                     }}
                 />
-            </main>
             </div>
         </div>
     )

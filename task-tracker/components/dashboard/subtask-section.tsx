@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { Plus, Trash2, Check, Loader2 } from "lucide-react"
 import { api } from "@/lib/api"
 import { cn } from "@/lib/utils"
-import { useGamification } from "@/hooks/use-gamification"
 import { useTaskStore } from "@/hooks/use-tasks"
 
 interface Subtask {
@@ -23,7 +22,6 @@ export function SubtaskSection({ taskId }: Props) {
     const [newSubtaskTitle, setNewSubtaskTitle] = useState("")
     const [isAdding, setIsAdding] = useState(false)
 
-    const { refreshStats, triggerXpNotification } = useGamification()
     const { updateTask } = useTaskStore()
 
     useEffect(() => {
@@ -41,6 +39,13 @@ export function SubtaskSection({ taskId }: Props) {
         }
     }
 
+    const syncParentCount = (updated: Subtask[]) => {
+        updateTask(taskId, {
+            subtaskCount: updated.length,
+            completedSubtaskCount: updated.filter(st => st.is_completed).length
+        })
+    }
+
     const handleAddSubtask = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!newSubtaskTitle.trim()) return
@@ -48,15 +53,10 @@ export function SubtaskSection({ taskId }: Props) {
         setIsAdding(true)
         try {
             const newSubtask = await api.addSubtask(taskId, newSubtaskTitle)
-            const updatedSubtasks = [...subtasks, newSubtask]
-            setSubtasks(updatedSubtasks)
+            const updated = [...subtasks, newSubtask]
+            setSubtasks(updated)
             setNewSubtaskTitle("")
-
-            // Update parent task count
-            updateTask(taskId, {
-                subtaskCount: updatedSubtasks.length,
-                completedSubtaskCount: updatedSubtasks.filter(st => st.is_completed).length
-            })
+            syncParentCount(updated)
         } catch (error) {
             console.error("Failed to add subtask:", error)
         } finally {
@@ -66,50 +66,25 @@ export function SubtaskSection({ taskId }: Props) {
 
     const toggleSubtask = async (subtaskId: string, currentStatus: boolean) => {
         const newStatus = !currentStatus
-
-        // Optimistic update
-        const updatedSubtasks = subtasks.map(st =>
+        const optimistic = subtasks.map(st =>
             st.id === subtaskId ? { ...st, is_completed: newStatus } : st
         )
-        setSubtasks(updatedSubtasks)
+        setSubtasks(optimistic)
 
         try {
             await api.updateSubtask(subtaskId, { is_completed: newStatus })
-
-            // 1. Sync XP - No immediate XP for subtasks now (Deferred)
-            // await refreshStats() 
-            // if (newStatus) {
-            //    triggerXpNotification(5)
-            // } else {
-            //     triggerXpNotification(-5)
-            // }
-
-            // 2. Sync Progress Bar
-            updateTask(taskId, {
-                subtaskCount: updatedSubtasks.length,
-                completedSubtaskCount: updatedSubtasks.filter(st => st.is_completed).length
-            })
-
-        } catch (error) {
-            // Revert on error
-            setSubtasks(subtasks.map(st =>
-                st.id === subtaskId ? { ...st, is_completed: currentStatus } : st
-            ))
-            console.error("Failed to toggle subtask:", error)
+            syncParentCount(optimistic)
+        } catch {
+            setSubtasks(subtasks)
         }
     }
 
     const deleteSubtask = async (subtaskId: string) => {
         try {
             await api.deleteSubtask(subtaskId)
-            const updatedSubtasks = subtasks.filter(st => st.id !== subtaskId)
-            setSubtasks(updatedSubtasks)
-
-            // Update parent task count
-            updateTask(taskId, {
-                subtaskCount: updatedSubtasks.length,
-                completedSubtaskCount: updatedSubtasks.filter(st => st.is_completed).length
-            })
+            const updated = subtasks.filter(st => st.id !== subtaskId)
+            setSubtasks(updated)
+            syncParentCount(updated)
         } catch (error) {
             console.error("Failed to delete subtask:", error)
         }
@@ -118,54 +93,60 @@ export function SubtaskSection({ taskId }: Props) {
     const completedCount = subtasks.filter(st => st.is_completed).length
     const progress = subtasks.length > 0 ? Math.round((completedCount / subtasks.length) * 100) : 0
 
-    if (isLoading) return <div className="py-4 flex justify-center"><Loader2 className="h-5 w-5 animate-spin text-dark-400" /></div>
+    if (isLoading) return (
+        <div className="py-4 flex justify-center">
+            <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+        </div>
+    )
 
     return (
-        <div className="p-4 rounded-xl bg-sand-50 dark:bg-dark-900/50 border border-sand-200 dark:border-dark-700 animate-in fade-in slide-in-from-top-2 duration-500">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-dark-500 flex items-center gap-2">
-                    <span className="text-orange-500">❖</span> Tactical Steps
+        <div className="space-y-3">
+            <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Subtasks
                 </h3>
                 {subtasks.length > 0 && (
-                    <span className="text-xs font-mono font-bold text-dark-400 bg-sand-100 dark:bg-dark-800 px-2 py-0.5 rounded-full">
-                        {completedCount}/{subtasks.length}
+                    <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 tabular-nums">
+                        {completedCount} / {subtasks.length}
                     </span>
                 )}
             </div>
 
-            {/* Progress Bar */}
             {subtasks.length > 0 && (
-                <div className="h-1.5 w-full bg-sand-200 dark:bg-dark-700 rounded-full mb-4 overflow-hidden">
+                <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div
-                        className="h-full bg-orange-500 transition-all duration-500 ease-out"
+                        className="h-full bg-indigo-500 rounded-full transition-all duration-500"
                         style={{ width: `${progress}%` }}
                     />
                 </div>
             )}
 
-            <div className="space-y-2 mb-4">
+            <div className="space-y-1">
                 {subtasks.map(st => (
-                    <div key={st.id} className="group flex items-center gap-3 p-2 rounded-lg hover:bg-white dark:hover:bg-dark-800 transition-colors">
+                    <div key={st.id} className="group flex items-center gap-2.5 py-1.5 px-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                         <button
                             onClick={() => toggleSubtask(st.id, st.is_completed)}
                             className={cn(
-                                "h-5 w-5 rounded border flex items-center justify-center transition-all",
+                                "h-4.5 w-4.5 rounded border-2 flex items-center justify-center transition-all shrink-0",
                                 st.is_completed
-                                    ? "bg-orange-500 border-orange-500 text-white"
-                                    : "border-sand-400 dark:border-dark-600 hover:border-orange-400"
+                                    ? "bg-indigo-500 border-indigo-500 text-white"
+                                    : "border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500"
                             )}
+                            style={{ width: '18px', height: '18px' }}
                         >
-                            {st.is_completed && <Check className="h-3.5 w-3.5" />}
+                            {st.is_completed && <Check className="h-2.5 w-2.5" />}
                         </button>
                         <span className={cn(
-                            "flex-1 text-sm font-medium transition-all",
-                            st.is_completed ? "text-dark-400 line-through decoration-sand-300" : "text-dark-900 dark:text-white"
+                            "flex-1 text-sm transition-colors",
+                            st.is_completed
+                                ? "text-slate-400 dark:text-slate-500 line-through"
+                                : "text-slate-700 dark:text-slate-300"
                         )}>
                             {st.title}
                         </span>
                         <button
                             onClick={() => deleteSubtask(st.id)}
-                            className="opacity-0 group-hover:opacity-100 p-1 text-dark-400 hover:text-red-500 transition-all"
+                            className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition-all rounded"
                         >
                             <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -178,13 +159,13 @@ export function SubtaskSection({ taskId }: Props) {
                     type="text"
                     value={newSubtaskTitle}
                     onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                    placeholder="Add a tactical step..."
-                    className="flex-1 bg-white dark:bg-dark-800 border border-sand-200 dark:border-dark-600 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all placeholder:text-dark-400"
+                    placeholder="Add a subtask..."
+                    className="flex-1 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
                 />
                 <button
                     type="submit"
                     disabled={!newSubtaskTitle.trim() || isAdding}
-                    className="p-1.5 bg-dark-900 dark:bg-white text-white dark:text-dark-900 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 transition-all"
+                    className="p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                     {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 </button>

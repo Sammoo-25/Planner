@@ -2,73 +2,130 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, CheckSquare, Calendar, BarChart3, Settings, Layout, Zap } from "lucide-react"
+import {
+    CheckSquare, Calendar, BarChart3, Settings, Layout,
+    Zap, LogIn, UserPlus, LogOut, Sword
+} from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useState, useEffect } from "react"
-import { LogIn, UserPlus, LogOut } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
+import { ModeToggle } from "@/components/mode-toggle"
+
+const NAV_ITEMS = [
+    { href: '/',         icon: CheckSquare, label: 'Dashboard'  },
+    { href: '/board',    icon: Layout,      label: 'Board'      },
+    { href: '/calendar', icon: Calendar,    label: 'Calendar'   },
+    { href: '/planner',  icon: Zap,         label: 'Planner'    },
+    { href: '/stats',    icon: BarChart3,   label: 'Statistics' },
+]
 
 export function Sidebar() {
     const pathname = usePathname()
     const { user, logout } = useAuth()
 
     return (
-        <aside className="hidden w-20 flex-col items-center border-r border-white/20 bg-white/10 backdrop-blur-xl py-8 md:flex dark:bg-black/20 dark:border-white/5 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-50">
-            <Link href="/" className="relative mb-8 group">
-                <div className="absolute inset-0 bg-blue-500/20 dark:bg-blue-500/30 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500 opacity-0 group-hover:opacity-100" />
-                <div className="relative rounded-2xl bg-gradient-to-tr from-stone-900 to-stone-800 p-3.5 text-white shadow-xl shadow-stone-900/20 group-hover:scale-110 group-active:scale-95 transition-all duration-300 dark:from-white dark:to-zinc-200 dark:text-stone-900 dark:shadow-white/10 ring-1 ring-white/10 dark:ring-black/10">
-                    <LayoutDashboard className="h-6 w-6" />
+        <>
+            {/* Desktop Sidebar */}
+            <aside className="hidden w-56 shrink-0 flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 md:flex z-50">
+                {/* Logo */}
+                <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-200 dark:border-slate-800">
+                    <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
+                        <Sword className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="min-w-0">
+                        <div className="font-semibold text-slate-900 dark:text-white text-sm leading-tight">Life RPG</div>
+                        <div className="text-[11px] text-slate-400 dark:text-slate-500 leading-tight">Planner</div>
+                    </div>
                 </div>
-            </Link>
 
-            <nav className="flex flex-1 flex-col gap-6 mt-4">
-                <NavItem href="/" icon={<CheckSquare />} label="Tasks" active={pathname === '/'} />
-                <NavItem href="/board" icon={<Layout />} label="Board" active={pathname === '/board'} />
-                <NavItem href="/calendar" icon={<Calendar />} label="Calendar" active={pathname === '/calendar'} />
-                <NavItem href="/planner" icon={<Zap />} label="Planner" active={pathname === '/planner'} />
-                <NavItem href="/stats" icon={<BarChart3 />} label="Stats" active={pathname === '/stats'} />
-            </nav>
+                {/* Navigation */}
+                <nav className="flex-1 px-3 py-4 space-y-0.5">
+                    {NAV_ITEMS.map(item => (
+                        <NavItem
+                            key={item.href}
+                            href={item.href}
+                            icon={<item.icon className="h-4 w-4" />}
+                            label={item.label}
+                            active={pathname === item.href}
+                        />
+                    ))}
+                </nav>
 
-            <div className="mt-auto flex flex-col gap-6">
-                {user ? (
-                    <>
-                        <NavItem href="/settings" icon={<Settings />} label="Settings" active={pathname === '/settings'} />
-                        <button
-                            onClick={logout}
-                            className="group relative flex h-12 w-12 items-center justify-center rounded-2xl transition-all duration-300 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 hover:shadow-lg hover:shadow-red-500/10"
+                {/* Bottom section */}
+                <div className="px-3 py-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                    <div className="px-1">
+                        <ModeToggle />
+                    </div>
+
+                    <div className="space-y-0.5">
+                        {user ? (
+                            <>
+                                <NavItem href="/settings" icon={<Settings className="h-4 w-4" />} label="Settings" active={pathname === '/settings'} />
+                                <button
+                                    onClick={logout}
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                                >
+                                    <LogOut className="h-4 w-4" />
+                                    Sign Out
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <NavItem href="/signin"  icon={<LogIn    className="h-4 w-4" />} label="Sign In"        active={pathname === '/signin'}  />
+                                <NavItem href="/signup"  icon={<UserPlus className="h-4 w-4" />} label="Create Account" active={pathname === '/signup'}  />
+                            </>
+                        )}
+                    </div>
+                </div>
+            </aside>
+
+            {/* Mobile Bottom Nav */}
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-1 safe-area-bottom">
+                {NAV_ITEMS.map(item => {
+                    const active = pathname === item.href
+                    return (
+                        <Link
+                            key={item.href}
+                            href={item.href}
+                            className={cn(
+                                "flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-lg transition-colors",
+                                active
+                                    ? "text-indigo-600 dark:text-indigo-400"
+                                    : "text-slate-400 dark:text-slate-500"
+                            )}
                         >
-                            <LogOut className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                            <span className="absolute left-16 hidden rounded-lg bg-stone-900 dark:bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white dark:text-stone-900 transition-all duration-200 z-50 group-hover:block whitespace-nowrap shadow-xl before:absolute before:-left-1 before:top-1/2 before:-translate-y-1/2 before:w-2 before:h-2 before:bg-inherit before:rotate-45">
-                                Sign Out
-                            </span>
-                        </button>
-                    </>
-                ) : (
-                    <>
-                        <NavItem href="/signin" icon={<LogIn />} label="Sign In" active={pathname === '/signin'} />
-                        <NavItem href="/signup" icon={<UserPlus />} label="Sign Up" active={pathname === '/signup'} />
-                    </>
-                )}
-            </div>
-        </aside>
+                            <item.icon className="h-5 w-5" />
+                            <span className="text-[9px] font-medium">{item.label}</span>
+                        </Link>
+                    )
+                })}
+            </nav>
+        </>
     )
 }
 
-function NavItem({ icon, label, href, active }: { icon: React.ReactNode, label: string, href: string, active?: boolean }) {
+function NavItem({ icon, label, href, active }: {
+    icon: React.ReactNode
+    label: string
+    href: string
+    active?: boolean
+}) {
     return (
-        <Link href={href} className={cn(
-            "group relative flex h-12 w-12 items-center justify-center rounded-2xl transition-all duration-300",
-            active
-                ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30 dark:shadow-blue-500/20 scale-110"
-                : "text-stone-400 dark:text-zinc-500 hover:bg-white/20 hover:text-stone-900 dark:hover:bg-white/10 dark:hover:text-white hover:scale-105"
-        )}>
-            {active && (
-                <div className="absolute inset-0 bg-blue-400 rounded-2xl blur-md opacity-40 animate-pulse" />
+        <Link
+            href={href}
+            className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                active
+                    ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400"
+                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
             )}
-            <span className="relative z-10 h-5 w-5 transition-transform duration-300 group-hover:scale-110">{icon}</span>
-            <span className="absolute left-16 hidden rounded-lg bg-stone-900 dark:bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white dark:text-stone-900 transition-all duration-200 z-50 group-hover:block whitespace-nowrap shadow-xl before:absolute before:-left-1 before:top-1/2 before:-translate-y-1/2 before:w-2 before:h-2 before:bg-inherit before:rotate-45">
-                {label}
+        >
+            <span className={cn(
+                "shrink-0",
+                active ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"
+            )}>
+                {icon}
             </span>
+            {label}
         </Link>
     )
 }

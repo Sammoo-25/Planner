@@ -3,184 +3,62 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  /* -- Refined Sand Palette -- */
-  --color-sand-50: #FCFAF7;
-  --color-sand-100: #F7F5F0;
-  --color-sand-200: #EBE7DE;
-  --color-sand-300: #D8D3C5;
-
-  /* -- Modern Dark Palette -- */
-  --color-dark-900: #0f172a;
-  --color-dark-800: #1e293b;
-  --color-dark-700: #334155;
-  --color-dark-50: #f8fafc;
-  --color-dark-100: #f1f5f9;
-  --color-dark-500: #64748b;
-
-  --color-status-overdue: #ef4444;
-  --color-status-high: #f97316;
-  --color-status-normal: #3b82f6;
-  --color-status-done: #22c55e;
-
-  --color-exp-primary: #8b5cf6;
-  --color-health-ok: #22c55e;
-  --color-health-low: #ef4444;
-  --color-health-bg: #dcfce7;
-  --chart-total: #e2e8f0;
-
   --font-montserrat: var(--font-montserrat);
   --font-sans: var(--font-montserrat);
 
-  /* Elite Hero Motion Tokens */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  --ease-in-out-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-  --shadow-elite: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-
-  /* Chart Colors */
-  --radar-grid: #94a3b8;
-  /* Slate 400 for Light Mode */
-}
-
-@theme dark {
-  --radar-grid: #e2e8f0;
-  /* Slate 200 for Dark Mode */
 }
 
 body {
-  /* Vibrant, creative animated pastel gradient for light mode */
-  background: linear-gradient(-45deg, #ff9a9e, #fecfef, #a1c4fd, #c2e9fb, #fbc2eb);
-  background-size: 400% 400%;
-  animation: gradientBG 15s ease infinite;
-  background-attachment: fixed;
-  color: #1e293b;
+  background-color: #f1f5f9;
+  color: #0f172a;
   font-family: var(--font-montserrat);
-  transition: color 0.4s var(--ease-in-out-smooth);
+  transition: background-color 0.2s var(--ease-smooth), color 0.2s var(--ease-smooth);
 }
 
 .dark body {
-  /* Deep, creative animated neon/galaxy gradient for dark mode */
-  background: linear-gradient(-45deg, #0f172a, #1e1b4b, #31103f, #1e3a8a, #020617);
-  background-size: 400% 400%;
-  animation: gradientBG 15s ease infinite;
-  background-attachment: fixed;
+  background-color: #0f172a;
   color: #f8fafc;
 }
 
-@keyframes gradientBG {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-}
-
-/* -- Elite Component Styles -- */
-
-.card-premium {
-  background-color: white;
-  border: 1px solid var(--sand-200);
-  border-radius: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s var(--ease-spring);
-}
-
-.card-premium:hover {
-  box-shadow: var(--shadow-elite);
-  transform: translateY(-2px);
-}
-
-.dark .card-premium {
-  background-color: var(--dark-800);
-  border-color: var(--dark-700);
-  box-shadow: none;
-}
-
-/* Glassmorphism Utilities */
-.glass {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.dark .glass {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-/* Intensity Effects */
-.warzone-glow {
-  animation: pulse-glow 2s infinite ease-in-out;
-}
-
-@keyframes pulse-glow {
-  0% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
-  }
-
-  50% {
-    box-shadow: 0 0 20px 5px rgba(59, 130, 246, 0.2);
-  }
-
-  100% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
-  }
-}
-
-/* Inputs Refinement */
+/* Input base styles */
 input,
 select,
 textarea {
-  color: #1e293b;
-  border: 1.5px solid var(--sand-300);
-  border-radius: 0.75rem;
-  transition: all 0.2s var(--ease-in-out-smooth);
+  color: #0f172a;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 0.5rem;
+  transition: border-color 0.15s var(--ease-smooth), box-shadow 0.15s var(--ease-smooth);
 }
 
-/* Fix Autocomplete/Autofill background color */
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus,
-input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 30px white inset !important;
-}
-
-.dark input:-webkit-autofill,
-.dark input:-webkit-autofill:hover,
-.dark input:-webkit-autofill:focus,
-.dark input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 30px var(--color-dark-900) inset !important;
-  -webkit-text-fill-color: white !important;
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
-.dark input,
-.dark select,
-.dark textarea {
-  background-color: var(--dark-900);
-  border-color: var(--dark-700);
-  color: #ffffff;
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 30px white inset !important;
 }
 
-/* Text & Colors */
-/* (Text colors now inherit naturally from body, allowing full control with Tailwind utilities) */
-
-/* Dragon/Hero Navigation Items */
-.sidebar-item-active {
-  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
-  color: white !important;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 30px #1e293b inset !important;
+  -webkit-text-fill-color: #f8fafc !important;
 }
 
 /* XP Gain Animation */
@@ -189,31 +67,28 @@ textarea:focus {
     transform: translateY(20px) scale(0.8);
     opacity: 0;
   }
-
   20% {
-    transform: translateY(0) scale(1.1);
+    transform: translateY(0) scale(1.05);
     opacity: 1;
   }
-
   80% {
-    transform: translateY(-20px) scale(1);
+    transform: translateY(-16px) scale(1);
     opacity: 1;
   }
-
   100% {
-    transform: translateY(-40px) scale(0.9);
+    transform: translateY(-32px) scale(0.95);
     opacity: 0;
   }
 }
 
 .animate-xp-pop {
-  animation: xp-pop 2s ease-out forwards;
+  animation: xp-pop 1.8s ease-out forwards;
 }
 
-/* Custom Scrollbar */
+/* Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -221,18 +96,51 @@ textarea:focus {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.3);
-  border-radius: 10px;
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.5);
+  background: #94a3b8;
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: #334155;
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: #475569;
 }
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Chart colors */
+:root {
+  --radar-grid: #94a3b8;
+  --chart-total: #e2e8f0;
+  --color-exp-primary: #6366f1;
+  --color-status-overdue: #ef4444;
+  --color-status-high: #f97316;
+  --color-status-normal: #6366f1;
+  --color-status-done: #10b981;
+  --color-health-ok: #10b981;
+  --color-health-low: #ef4444;
+  --color-health-bg: #d1fae5;
+}
+
+.dark {
+  --radar-grid: #e2e8f0;
+}
+
+/* Priority dot indicators */
+.priority-critical { background-color: #ef4444; }
+.priority-high     { background-color: #f97316; }
+.priority-medium   { background-color: #6366f1; }
+.priority-low      { background-color: #94a3b8; }

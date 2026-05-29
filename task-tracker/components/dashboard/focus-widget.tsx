@@ -1,7 +1,6 @@
 "use client"
 
-import { Clock, Target, Maximize2 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Maximize2 } from "lucide-react"
 import { useFocus } from "@/context/FocusContext"
 import { Task } from "@/types"
 
@@ -25,20 +24,17 @@ export function FocusWidget({ tasks }: Props) {
         <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-right-10 fade-in duration-300">
             <button
                 onClick={openModal}
-                className="group flex items-center gap-4 bg-dark-900 dark:bg-white p-2 pl-4 rounded-2xl shadow-2xl border-none hover:scale-105 transition-all text-white dark:text-dark-900"
+                className="group flex items-center gap-3 bg-slate-900 dark:bg-slate-800 px-4 py-2.5 rounded-2xl shadow-xl border border-slate-700/50 hover:scale-105 active:scale-95 transition-all text-white"
             >
-                <div className="flex flex-col items-start pr-2 border-r border-white/10 dark:border-dark-900/10">
-                    <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Focusing On</span>
-                    <span className="text-xs font-bold truncate max-w-[120px]">{taskName}</span>
+                <div className="flex flex-col items-start pr-3 border-r border-slate-700">
+                    <span className="text-[10px] font-medium uppercase tracking-widest text-slate-400">Focusing</span>
+                    <span className="text-xs font-semibold truncate max-w-[120px] text-slate-100">{taskName}</span>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-center">
-                        <span className="text-lg font-black font-mono leading-none">{timeLeft}</span>
-                        <span className="text-[8px] font-bold uppercase tracking-tighter opacity-60">Remaining</span>
-                    </div>
-                    <div className="bg-white/10 dark:bg-dark-900/10 p-2 rounded-xl group-hover:bg-status-normal group-hover:text-white transition-colors">
-                        <Maximize2 className="h-4 w-4" />
+                <div className="flex items-center gap-2.5">
+                    <span className="text-base font-bold font-mono tabular-nums text-white">{timeLeft}</span>
+                    <div className="bg-slate-700 group-hover:bg-indigo-600 p-1.5 rounded-lg transition-colors">
+                        <Maximize2 className="h-3.5 w-3.5" />
                     </div>
                 </div>
             </button>

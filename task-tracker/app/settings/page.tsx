@@ -30,149 +30,115 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="flex min-h-screen bg-transparent font-sans text-dark-900 transition-colors relative">
-            <div className="relative z-10 flex w-full h-full">
+        <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 transition-colors">
+            <div className="flex w-full h-full">
             <Sidebar />
 
-            <main className="flex-1 p-8">
-                <header className="mb-8">
-                    <h1 className="text-3xl font-bold">Settings</h1>
-                    <p className="text-dark-500">Manage your game data and preferences.</p>
+            <main className="flex-1 overflow-y-auto custom-scrollbar">
+                <header className="px-6 py-5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                    <h1 className="text-lg font-semibold text-slate-800 dark:text-white">Settings</h1>
+                    <p className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">Manage your preferences and data</p>
                 </header>
 
-                <div className="max-w-2xl space-y-6">
-                    <Card className="overflow-hidden border-none shadow-xl bg-white/50 dark:bg-dark-800/50 backdrop-blur-xl">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Camera className="h-5 w-5 text-blue-500" />
-                                Hero Profile
-                            </CardTitle>
-                            <CardDescription>Customize your hero's appearance in the hub.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="flex flex-col md:flex-row items-center gap-8">
-                                <div className="relative h-32 w-32 rounded-full border-4 border-status-normal/20 overflow-hidden shadow-2xl">
-                                    <img src={stats.avatarUrl} alt="Current Avatar" className="h-full w-full object-cover" />
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
-                                        <Upload className="h-8 w-8 text-white" />
-                                    </div>
-                                </div>
+                <div className="p-6 max-w-2xl space-y-4">
+                    {/* Avatar */}
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Camera className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Profile Avatar</h2>
+                        </div>
+                        <div className="flex flex-col md:flex-row items-start gap-6">
+                            <div className="h-20 w-20 rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 shrink-0">
+                                <img src={stats.avatarUrl} alt="Current Avatar" className="h-full w-full object-cover" />
+                            </div>
 
-                                <div className="flex-1 space-y-4">
-                                    <p className="text-sm font-black uppercase tracking-widest text-dark-400">Select Preset</p>
-                                    <div className="flex flex-wrap gap-3">
+                            <div className="flex-1 space-y-3">
+                                <div>
+                                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Preset avatars</p>
+                                    <div className="flex flex-wrap gap-2">
                                         {presets.map((url) => (
                                             <button
                                                 key={url}
                                                 onClick={() => updateAvatar(url)}
-                                                className={`h-16 w-16 rounded-xl border-2 transition-all overflow-hidden hover:scale-105 active:scale-95 ${stats.avatarUrl === url ? "border-status-normal ring-2 ring-status-normal/20" : "border-sand-200 dark:border-dark-700"}`}
+                                                className={`h-12 w-12 rounded-lg border-2 transition-all overflow-hidden hover:opacity-90 ${stats.avatarUrl === url ? "border-indigo-500 ring-2 ring-indigo-500/20" : "border-slate-200 dark:border-slate-700"}`}
                                             >
                                                 <img src={url} className="h-full w-full object-cover" />
                                             </button>
                                         ))}
                                     </div>
+                                </div>
 
-                                    <div className="space-y-2">
-                                        <p className="text-sm font-black uppercase tracking-widest text-dark-400">Custom Image URL</p>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                placeholder="https://..."
-                                                value={customUrl}
-                                                onChange={(e) => setCustomUrl(e.target.value)}
-                                                className="flex-1 bg-white dark:bg-dark-900 border-sand-200 dark:border-dark-700"
-                                            />
-                                            <button
-                                                onClick={() => { if (customUrl) updateAvatar(customUrl); setCustomUrl(""); }}
-                                                className="px-4 py-2 bg-dark-900 text-white dark:bg-white dark:text-dark-900 rounded-xl font-bold text-sm"
-                                            >
-                                                Apply
-                                            </button>
-                                        </div>
+                                <div>
+                                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Custom URL</p>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="https://example.com/avatar.jpg"
+                                            value={customUrl}
+                                            onChange={(e) => setCustomUrl(e.target.value)}
+                                            className="flex-1 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 rounded-lg"
+                                        />
+                                        <button
+                                            onClick={() => { if (customUrl) { updateAvatar(customUrl); setCustomUrl("") } }}
+                                            className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
+                                        >
+                                            Apply
+                                        </button>
                                     </div>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
 
-                    <Card className="border-none shadow-xl bg-white/50 dark:bg-dark-800/50 backdrop-blur-xl">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Globe className="h-5 w-5 text-blue-500" />
-                                Regional Settings
-                            </CardTitle>
-                            <CardDescription>Adjust your time zone to stay in sync with your local time.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2">
-                                <label className="text-sm font-black uppercase tracking-widest text-dark-400">Time Zone</label>
-                                <select
-                                    value={timeZone}
-                                    onChange={(e) => setTimeZone(e.target.value)}
-                                    className="w-full p-3 rounded-xl bg-sand-50 dark:bg-dark-900 border border-sand-200 dark:border-dark-700 font-bold text-dark-900 dark:text-white"
-                                >
-                                    {Intl.supportedValuesOf('timeZone').map((tz) => (
-                                        <option key={tz} value={tz}>
-                                            {tz.replace(/_/g, ' ')}
-                                        </option>
-                                    ))}
-                                </select>
-                                <p className="text-xs text-dark-500 mt-2">
-                                    Current Selection: <span className="font-bold text-status-normal">{timeZone.replace(/_/g, ' ')}</span>
-                                </p>
+                    {/* Timezone */}
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Globe className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Time Zone</h2>
+                        </div>
+                        <select
+                            value={timeZone}
+                            onChange={(e) => setTimeZone(e.target.value)}
+                            className="w-full px-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 rounded-lg"
+                        >
+                            {Intl.supportedValuesOf('timeZone').map((tz) => (
+                                <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                            Current: <span className="font-medium text-slate-600 dark:text-slate-300">{timeZone.replace(/_/g, ' ')}</span>
+                        </p>
+                    </div>
+
+                    {/* Appearance */}
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+                        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">Appearance</h2>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Dark Mode</p>
+                                <p className="text-xs text-slate-400 dark:text-slate-500">Toggle between light and dark theme</p>
                             </div>
-                        </CardContent>
-                    </Card>
+                            <ModeToggle />
+                        </div>
+                    </div>
 
-                    <Card className="border-none shadow-xl bg-white/50 dark:bg-dark-800/50 backdrop-blur-xl">
-                        <CardHeader>
-                            <CardTitle>Appearance Settings</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex items-center justify-between p-4 rounded-2xl bg-sand-100 dark:bg-dark-900/50">
-                                <div>
-                                    <p className="font-bold">Dark Mode</p>
-                                    <p className="text-xs text-dark-400">Toggle dark and light themes</p>
-                                </div>
-                                <ModeToggle />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-none shadow-xl bg-white/20 dark:bg-dark-800/20 backdrop-blur-3xl">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <RefreshCw className="h-5 w-5" />
-                                Reset Game Data
-                            </CardTitle>
-                            <CardDescription>
-                                Clear all your current quests and restore the initial "New Game" state.
-                                This is useful for testing or restarting your journey.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <button
-                                onClick={handleReset}
-                                className="flex items-center gap-2 rounded-lg bg-status-overdue px-4 py-2 text-white hover:bg-red-600"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                                Reset Data
-                            </button>
-                            <p className="mt-2 text-xs text-dark-500">
-                                * This action cannot be undone. Your tasks will be replaced with defaults.
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="opacity-60 border-none shadow-xl bg-white/20 dark:bg-dark-800/20 backdrop-blur-3xl">
-                        <CardHeader>
-                            <CardTitle>Account</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p>Level: {stats.level}</p>
-                            <p className="text-sm text-dark-500">Local Player (No cloud sync)</p>
-                        </CardContent>
-                    </Card>
+                    {/* Danger zone */}
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-rose-200 dark:border-rose-900/50 p-5">
+                        <div className="flex items-center gap-2 mb-1">
+                            <RefreshCw className="h-4 w-4 text-rose-500" />
+                            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Reset Data</h2>
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                            Clear all tasks and restore defaults. This cannot be undone.
+                        </p>
+                        <button
+                            onClick={handleReset}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium transition-colors"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            Reset All Data
+                        </button>
+                    </div>
                 </div>
             </main>
             </div>

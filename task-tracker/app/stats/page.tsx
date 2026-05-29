@@ -22,11 +22,6 @@ export default function StatsPage() {
     const [timeRange, setTimeRange] = useState<TimeRange>('7d')
     const [hasMounted, setHasMounted] = useState(false)
 
-    useState(() => {
-        setHasMounted(true)
-    })
-
-    // OR use useEffect which is safer for hydration
     useEffect(() => {
         setHasMounted(true)
     }, [])
@@ -125,36 +120,33 @@ export default function StatsPage() {
     }, [tasks])
 
     if (!hasMounted) return (
-        <div className="flex min-h-screen items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <div className="flex min-h-screen items-center justify-center bg-slate-100 dark:bg-slate-950">
+            <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
         </div>
     )
 
     return (
-        <div className="flex min-h-screen bg-transparent dark:bg-transparent font-sans text-dark-900 transition-colors relative">
+        <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 transition-colors relative">
             <div className="relative z-10 flex w-full h-full">
             <Sidebar />
 
-            <main className="flex-1 p-8 overflow-y-auto">
-                <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <main className="flex-1 p-6 lg:p-8 overflow-y-auto custom-scrollbar">
+                <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-4xl font-black text-dark-900 dark:text-white flex items-center gap-3">
-                            <Star className="h-8 w-8 text-orange-400 fill-orange-400" />
-                            Hero's Log
-                        </h1>
-                        <p className="text-dark-500 mt-2 font-medium">Your legend, recorded in eternity.</p>
+                        <h1 className="text-xl font-semibold text-slate-800 dark:text-white">Statistics</h1>
+                        <p className="text-slate-400 dark:text-slate-500 text-sm mt-0.5">Track your productivity over time</p>
                     </div>
 
-                    <div className="flex bg-white/20 dark:bg-dark-800/20 backdrop-blur-xl p-1.5 rounded-2xl shadow-sm self-start border border-white/20 dark:border-white/10">
+                    <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 self-start">
                         {(['7d', '30d', 'all'] as TimeRange[]).map((r) => (
                             <button
                                 key={r}
                                 onClick={() => setTimeRange(r)}
                                 className={cn(
-                                    "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                                    "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
                                     timeRange === r
-                                        ? "bg-dark-900 text-white dark:bg-white dark:text-dark-900 shadow-lg"
-                                        : "text-dark-600 hover:text-dark-900 dark:text-dark-300 dark:hover:text-white"
+                                        ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm"
+                                        : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
                                 )}
                             >
                                 {r}
@@ -164,57 +156,43 @@ export default function StatsPage() {
                 </header>
 
                 {/* Core Metrics */}
-                <div className="grid gap-6 md:grid-cols-4 mb-10">
+                <div className="grid gap-4 md:grid-cols-4 mb-6">
                     {[
-                        { label: "Level", value: stats.level, icon: Trophy, color: "text-orange-500", detail: `Rank: Elite Hero` },
-                        { label: "Focus Energy", value: `${stats.focusStats?.totalMinutes || 0}m`, icon: Timer, color: "text-blue-500", detail: `${stats.focusStats?.totalSessions || 0} Sessions` },
-                        { label: "Battles Won", value: completedTasksInRange.length, icon: Swords, color: "text-red-500", detail: `In this era` },
-                        { label: "Survival Rate", value: `${successRate}%`, icon: Zap, color: "text-emerald-500", detail: "Quest Success" }
+                        { label: "Level", value: stats.level, icon: Trophy, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/50", detail: `Hero Rank` },
+                        { label: "Focus Time", value: `${stats.focusStats?.totalMinutes || 0}m`, icon: Timer, color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-950/50", detail: `${stats.focusStats?.totalSessions || 0} sessions` },
+                        { label: "Completed", value: completedTasksInRange.length, icon: Swords, color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-950/50", detail: `In period` },
+                        { label: "Success Rate", value: `${successRate}%`, icon: Zap, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/50", detail: "Completion rate" }
                     ].map((m, i) => (
-                        <div key={i} className="card-premium p-6 flex flex-col justify-between group hover:scale-[1.02] transition-all bg-white/20 dark:bg-dark-800/20 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className={cn("p-3 rounded-2xl bg-sand-50 dark:bg-dark-700/50", m.color)}>
-                                    <m.icon className="h-6 w-6" />
+                        <div key={i} className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center", m.bg)}>
+                                    <m.icon className={cn("h-5 w-5", m.color)} />
                                 </div>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-dark-300 group-hover:text-dark-500 transition-colors">
-                                    {m.label}
-                                </span>
+                                <span className="text-sm font-medium text-slate-500 dark:text-slate-400">{m.label}</span>
                             </div>
-                            <div>
-                                <h3 className="text-3xl font-black text-dark-900 dark:text-white tracking-tight">{m.value}</h3>
-                                <p className="text-[10px] font-bold text-dark-400 uppercase tracking-tighter mt-1">{m.detail}</p>
-                            </div>
+                            <div className="text-2xl font-bold text-slate-900 dark:text-white">{m.value}</div>
+                            <div className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{m.detail}</div>
                         </div>
                     ))}
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-3 mb-10">
-                    {/* Tactical Execution Flow */}
-                    <div className="lg:col-span-2 relative overflow-hidden rounded-[2rem] border border-white/20 dark:border-white/10 shadow-2xl bg-white/20 dark:bg-dark-800/20 backdrop-blur-3xl h-[450px] min-w-0 group">
-                        {/* Decorative Background Blurs */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
-                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -ml-32 -mb-32 pointer-events-none" />
-
-                        <div className="p-8 h-full flex flex-col relative z-10">
-                            <div className="flex items-start justify-between mb-6">
-                                <div>
-                                    <h3 className="text-xl font-black flex items-center gap-2 text-dark-900 dark:text-white">
-                                        <div className="p-2 bg-blue-500/10 rounded-xl text-blue-500">
-                                            <TrendingUp className="h-5 w-5" />
-                                        </div>
-                                        Tactical Execution Flow
-                                    </h3>
-                                    <p className="text-xs font-bold text-dark-400 mt-1 ml-11 uppercase tracking-wide">Volume & Balance Analysis</p>
+                <div className="grid gap-4 lg:grid-cols-3 mb-6">
+                    {/* Task Execution Flow */}
+                    <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 h-[400px] min-w-0 overflow-hidden">
+                        <div className="p-5 h-full flex flex-col">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <TrendingUp className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                    <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Task Completion Trend</h3>
                                 </div>
-                                <div className="flex gap-2">
-                                    {/* Legend */}
-                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-sand-50 dark:bg-dark-900/50 border border-sand-100 dark:border-dark-700/50">
-                                        <span className="w-2 h-2 rounded-full bg-blue-500" />
-                                        <span className="text-[10px] font-bold text-dark-500 uppercase">Work</span>
+                                <div className="flex gap-3">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                                        <span className="text-[11px] text-slate-400">Work</span>
                                     </div>
-                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-sand-50 dark:bg-dark-900/50 border border-sand-100 dark:border-dark-700/50">
-                                        <span className="w-2 h-2 rounded-full bg-purple-500" />
-                                        <span className="text-[10px] font-bold text-dark-500 uppercase">Learning</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-violet-500" />
+                                        <span className="text-[11px] text-slate-400">Learning</span>
                                     </div>
                                 </div>
                             </div>
@@ -263,14 +241,13 @@ export default function StatsPage() {
                                         />
                                         <Tooltip
                                             contentStyle={{
-                                                borderRadius: '16px',
-                                                border: '1px solid rgba(255,255,255,0.1)',
-                                                backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                                                backdropFilter: 'blur(8px)',
-                                                padding: '12px',
-                                                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
+                                                borderRadius: '12px',
+                                                border: '1px solid #e2e8f0',
+                                                backgroundColor: '#ffffff',
+                                                padding: '10px 14px',
+                                                boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                                                fontSize: '11px'
                                             }}
-                                            itemStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}
                                             cursor={{ stroke: '#94a3b8', strokeWidth: 1, strokeDasharray: '4 4' }}
                                         />
                                         <Area type="monotone" dataKey="Work" stackId="1" stroke="#3b82f6" fill="url(#colorWork)" strokeWidth={2} />
@@ -285,102 +262,99 @@ export default function StatsPage() {
                     </div>
 
                     {/* Attribute Radar */}
-                    <div className="card-premium p-8 flex flex-col h-[450px] min-w-0 bg-white/20 dark:bg-dark-800/20 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl">
-                        <h3 className="text-xl font-bold mb-6 text-dark-900 dark:text-white text-center">Hero's Core Potential</h3>
-                        <div className="flex-1 min-h-[300px]">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 flex flex-col h-[400px] min-w-0">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Brain className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Skill Distribution</h3>
+                        </div>
+                        <div className="flex-1 min-h-[280px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <RadarChart cx="50%" cy="50%" outerRadius="70%" data={attributeData}>
-                                    <PolarGrid stroke="var(--radar-grid)" strokeOpacity={0.5} />
-                                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} />
-                                    <Radar name="Stats" dataKey="A" stroke="#f97316" fill="#f97316" fillOpacity={0.5} />
+                                    <PolarGrid stroke="var(--radar-grid)" strokeOpacity={0.4} />
+                                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                                    <Radar name="Stats" dataKey="A" stroke="#6366f1" fill="#6366f1" fillOpacity={0.35} />
                                 </RadarChart>
                             </ResponsiveContainer>
                         </div>
-                        <p className="text-[10px] text-center text-dark-400 font-black uppercase tracking-widest mt-4">
-                            Balanced growth leads to legendary status.
-                        </p>
                     </div>
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-3">
+                <div className="grid gap-4 lg:grid-cols-3 mb-6">
                     {/* Productivity Heatmap */}
-                    <div className="lg:col-span-2 card-premium p-8 bg-white/20 dark:bg-dark-800/20 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl">
-                        <h3 className="text-xl font-bold mb-6 flex items-center gap-2 dark:text-white">
-                            <CalendarDays className="h-5 w-5 text-green-500" />
-                            Daily Battle Intensity
-                        </h3>
-                        <div className="flex flex-wrap gap-2 justify-center">
+                    <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+                        <div className="flex items-center gap-2 mb-4">
+                            <CalendarDays className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Activity Heatmap</h3>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 justify-center">
                             {heatmapDays.map((d, i) => (
                                 <div
                                     key={i}
-                                    title={`${format(d.date, 'MMM d')}: ${d.count} quests`}
+                                    title={`${format(d.date, 'MMM d')}: ${d.count} tasks`}
                                     className={cn(
-                                        "h-3.5 w-3.5 rounded-sm transition-all hover:scale-150 cursor-pointer",
-                                        d.count === 0 ? "bg-sand-200 dark:bg-dark-700" :
-                                            d.count === 1 ? "bg-green-200" :
-                                                d.count === 2 ? "bg-green-400" :
-                                                    "bg-green-600"
+                                        "h-3 w-3 rounded-sm transition-transform hover:scale-125 cursor-pointer",
+                                        d.count === 0 ? "bg-slate-100 dark:bg-slate-800" :
+                                            d.count === 1 ? "bg-emerald-200 dark:bg-emerald-900" :
+                                                d.count === 2 ? "bg-emerald-400 dark:bg-emerald-700" :
+                                                    "bg-emerald-600"
                                     )}
                                 />
                             ))}
                         </div>
-                        <div className="flex justify-center gap-4 mt-6 text-[10px] font-bold text-dark-400 uppercase tracking-widest">
-                            <span>Peaceful</span>
+                        <div className="flex justify-center items-center gap-2 mt-4 text-[11px] text-slate-400">
+                            <span>Less</span>
                             <div className="flex gap-1">
-                                <div className="h-3 w-3 rounded-sm bg-sand-200 dark:bg-dark-700" />
-                                <div className="h-3 w-3 rounded-sm bg-green-200" />
-                                <div className="h-3 w-3 rounded-sm bg-green-400" />
-                                <div className="h-3 w-3 rounded-sm bg-green-600" />
+                                <div className="h-3 w-3 rounded-sm bg-slate-100 dark:bg-slate-800" />
+                                <div className="h-3 w-3 rounded-sm bg-emerald-200 dark:bg-emerald-900" />
+                                <div className="h-3 w-3 rounded-sm bg-emerald-400 dark:bg-emerald-700" />
+                                <div className="h-3 w-3 rounded-sm bg-emerald-600" />
                             </div>
-                            <span>Warzone</span>
+                            <span>More</span>
                         </div>
                     </div>
 
                     {/* Peak Hour */}
-                    <div className="card-premium p-8 h-full bg-white/20 dark:bg-dark-800/20 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl">
-                        <h3 className="text-xl font-bold mb-6 flex items-center gap-2 dark:text-white">
-                            <Zap className="h-5 w-5 text-yellow-500" />
-                            The Golden Hour
-                        </h3>
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Zap className="h-4 w-4 text-amber-500" />
+                            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Peak Hours</h3>
+                        </div>
                         <div className="h-[180px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={peakHourData}>
-                                    <XAxis dataKey="name" fontSize={8} tickLine={false} axisLine={false} />
-                                    <Bar dataKey="victories" fill="#eab308" radius={[4, 4, 0, 0]} />
+                                    <XAxis dataKey="name" fontSize={9} tickLine={false} axisLine={false} stroke="#94a3b8" />
+                                    <Bar dataKey="victories" fill="#6366f1" radius={[3, 3, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
-                        <p className="text-[10px] text-center mt-4 text-dark-400 font-bold uppercase tracking-widest leading-loose">
-                            Your performance peaks during the early hunts.
-                        </p>
                     </div>
                 </div>
 
                 {/* Achievement Gallery */}
-                <div className="mt-10 mb-10">
-                    <h3 className="text-xl font-bold mb-6 flex items-center gap-2 dark:text-white">
-                        <Heart className="h-5 w-5 text-red-500 fill-red-500" />
-                        Achievement Gallery
-                    </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Trophy className="h-4 w-4 text-amber-500" />
+                        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Achievements</h3>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {achievementList.map((a) => (
                             <div
                                 key={a.id}
                                 className={cn(
-                                    "card-premium p-6 border-0 flex flex-col items-center text-center transition-all bg-white/20 dark:bg-dark-800/20 backdrop-blur-xl shadow-xl border-white/20 dark:border-white/10 border",
-                                    a.unlocked ? "opacity-100 hover:scale-105" : "opacity-30 grayscale saturate-0"
+                                    "bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 flex flex-col items-center text-center transition-all",
+                                    a.unlocked ? "opacity-100" : "opacity-40 grayscale"
                                 )}
                             >
                                 <div className={cn(
-                                    "h-16 w-16 rounded-full flex items-center justify-center mb-4 shadow-inner",
-                                    a.unlocked ? "bg-orange-100 text-orange-600 dark:bg-orange-900/40" : "bg-sand-100 text-dark-400"
+                                    "h-12 w-12 rounded-xl flex items-center justify-center mb-3",
+                                    a.unlocked ? "bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400" : "bg-slate-100 dark:bg-slate-800 text-slate-400"
                                 )}>
-                                    <a.icon className="h-8 w-8" />
+                                    <a.icon className="h-6 w-6" />
                                 </div>
-                                <h4 className="text-sm font-black text-dark-900 dark:text-white mb-1 uppercase tracking-tight">{a.title}</h4>
-                                <p className="text-[10px] font-bold text-dark-500 uppercase tracking-tighter leading-tight">{a.desc}</p>
+                                <h4 className="text-xs font-semibold text-slate-800 dark:text-slate-200 mb-1">{a.title}</h4>
+                                <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-tight">{a.desc}</p>
                                 {!a.unlocked && (
-                                    <div className="mt-4 px-2 py-0.5 rounded-full bg-dark-100 dark:bg-dark-700 text-[8px] font-black uppercase text-dark-400">Locked</div>
+                                    <div className="mt-2 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-400">Locked</div>
                                 )}
                             </div>
                         ))}

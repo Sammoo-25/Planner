@@ -3,14 +3,15 @@
 import { Task } from "@/types"
 import { useTaskStore } from "@/hooks/use-tasks"
 import { useState, useEffect } from "react"
-import { Calendar, Tag, AlertCircle, Clock, Trash2, Save, Timer, Sword, Plus } from "lucide-react"
+import { Calendar, Tag, AlertCircle, Clock, Trash2, Save, Timer, Sword, Plus, X } from "lucide-react"
 import { useSettingsStore } from "@/hooks/use-settings"
 import { toZonedTime, fromZonedTime } from "date-fns-tz"
 import { format } from "date-fns"
+import { cn } from "@/lib/utils"
 
 interface Props {
     task?: Task
-    onSave: (task: Partial<Task>) => void
+    onSave: (task: Partial<Task> & { subtasks?: string[] }) => void
     onDelete?: (id: string) => void
     onCancel: () => void
 }
@@ -35,10 +36,7 @@ export function TaskForm({ task, onSave, onDelete, onCancel }: Props) {
     useEffect(() => {
         if (task) {
             setFormData(task)
-            // Load existing subtasks if editing?
-            // For now, simple creation flow support
         } else {
-            // Reset for new task
             setFormData({
                 title: "",
                 category: "General",
@@ -66,49 +64,37 @@ export function TaskForm({ task, onSave, onDelete, onCancel }: Props) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        // Validation: Check for duplicate titles
         const isDuplicate = tasks.some(t =>
             t.title.trim().toLowerCase() === formData.title?.trim().toLowerCase() &&
             t.id !== task?.id
         )
 
         if (isDuplicate) {
-            setError("A quest with this title already exists!")
+            setError("A task with this title already exists.")
             return
         }
 
-        // 1. Save the main task
-        // We need to Intercept onSave to handle subtasks
-        // But onSave is passed from parent...
-        // Let's modify the parent logic or handle it here?
-        // The parent (EditTaskModal) calls use-tasks store. 
-        // We can't easily wait for the ID here if onSave is void.
-
-        // Actually, we should trust the user provided functionality 
-        // OR we need to change how this form works. 
-        // Given the constraints, let's assume onSave handles the task creation. 
-        // WE CANNOT easily add subtasks here without the new ID.
-        // So we will pass the subtasks UP to the parent or handle it differently.
-
-        // WAIT: The prompt asked to "rewrite logic". 
-        // I will modify this component to handle the API call directly OR pass the subtasks up.
-        // passing 'subtasks' to onSave is cleaner if we modify the interface.
-
-        // Let's modify the interface to accept subtasks in onSave
-        onSave({ ...formData, subtasks } as any)
+        onSave({ ...formData, subtasks })
     }
 
+    const labelClass = "text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5"
+    const inputClass = "w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:border-indigo-500 dark:focus:border-indigo-400"
+
     return (
-        <form onSubmit={handleSubmit} className="space-y-6 h-full flex flex-col">
-            <div className="flex-1 space-y-6 overflow-y-auto px-1">
-                {/* Title Input */}
-                <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-dark-500">Quest Title</label>
+        <form onSubmit={handleSubmit} className="space-y-5 h-full flex flex-col">
+            <div className="flex-1 space-y-5 overflow-y-auto custom-scrollbar pr-1">
+
+                {/* Title */}
+                <div className="space-y-1.5">
+                    <label className={labelClass}>Quest Title</label>
                     <textarea
                         autoFocus
                         required
                         rows={3}
-                        className={`w-full text-lg font-semibold bg-white dark:bg-dark-900 border-sand-300 dark:border-dark-700 focus:ring-2 focus:ring-status-normal rounded-xl px-4 py-3 placeholder:text-dark-500/50 resize-none ${error ? 'border-red-500 focus:ring-red-500' : ''}`}
+                        className={cn(
+                            "w-full text-base font-semibold bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 placeholder:text-slate-400 dark:placeholder:text-slate-600 resize-none text-slate-900 dark:text-slate-100",
+                            error && "border-rose-500 dark:border-rose-500 focus:border-rose-500"
+                        )}
                         placeholder="e.g. Slay the Bug Dragon"
                         value={formData.title}
                         onChange={e => {
@@ -116,17 +102,21 @@ export function TaskForm({ task, onSave, onDelete, onCancel }: Props) {
                             setError("")
                         }}
                     />
-                    {error && <p className="text-sm text-red-500 font-bold flex items-center gap-1"><AlertCircle className="h-4 w-4" /> {error}</p>}
+                    {error && (
+                        <p className="text-sm text-rose-500 flex items-center gap-1.5">
+                            <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {error}
+                        </p>
+                    )}
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                    {/* Category */}
-                    <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-dark-500">
-                            <Tag className="h-3 w-3" /> Class
+                {/* Category / Priority / Status */}
+                <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                        <label className={labelClass}>
+                            <Tag className="h-3 w-3" /> Category
                         </label>
                         <select
-                            className="w-full bg-white dark:bg-dark-900 border-sand-300 dark:border-dark-700 rounded-lg px-3 py-2 text-sm"
+                            className={inputClass}
                             value={formData.category}
                             onChange={e => setFormData({ ...formData, category: e.target.value })}
                         >
@@ -134,35 +124,34 @@ export function TaskForm({ task, onSave, onDelete, onCancel }: Props) {
                             <option>Work</option>
                             <option>Health</option>
                             <option>Learning</option>
+                            <option>Hobby</option>
                         </select>
                     </div>
 
-                    {/* Priority */}
-                    <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-dark-500">
-                            <AlertCircle className="h-3 w-3" /> Difficulty
+                    <div className="space-y-1.5">
+                        <label className={labelClass}>
+                            <AlertCircle className="h-3 w-3" /> Priority
                         </label>
                         <select
-                            className="w-full bg-white dark:bg-dark-900 border-sand-300 dark:border-dark-700 rounded-lg px-3 py-2 text-sm"
+                            className={inputClass}
                             value={formData.priority}
-                            onChange={e => setFormData({ ...formData, priority: e.target.value as any })}
+                            onChange={e => setFormData({ ...formData, priority: e.target.value as Task['priority'] })}
                         >
-                            <option value="Low">Low (Common)</option>
-                            <option value="Medium">Medium (Rare)</option>
-                            <option value="High">High (Epic)</option>
-                            <option value="Critical">Critical (Legendary)</option>
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                            <option value="Critical">Critical</option>
                         </select>
                     </div>
 
-                    {/* Status */}
-                    <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-dark-500">
+                    <div className="space-y-1.5">
+                        <label className={labelClass}>
                             <Sword className="h-3 w-3" /> Status
                         </label>
                         <select
-                            className="w-full bg-white dark:bg-dark-900 border-sand-300 dark:border-dark-700 rounded-lg px-3 py-2 text-sm"
+                            className={inputClass}
                             value={formData.status}
-                            onChange={e => setFormData({ ...formData, status: e.target.value as any })}
+                            onChange={e => setFormData({ ...formData, status: e.target.value as Task['status'] })}
                         >
                             <option>To Do</option>
                             <option>In Progress</option>
@@ -171,29 +160,35 @@ export function TaskForm({ task, onSave, onDelete, onCancel }: Props) {
                     </div>
                 </div>
 
-                {/* Subtasks Section for High/Critical (Only during creation) */}
+                {/* Subtasks — only during creation for High/Critical */}
                 {!task && (formData.priority === 'High' || formData.priority === 'Critical') && (
-                    <div className="space-y-3 p-4 bg-sand-50 dark:bg-dark-800/50 rounded-xl border border-sand-200 dark:border-dark-700 animate-in fade-in slide-in-from-top-2">
-                        <label className="text-xs font-bold uppercase tracking-wider text-dark-500 flex justify-between">
-                            <span>Tactical Steps</span>
-                            <span className="text-orange-600">{subtasks.length} Steps</span>
-                        </label>
-
-                        <div className="space-y-2">
-                            {subtasks.map((step, idx) => (
-                                <div key={idx} className="flex items-center gap-2 text-sm bg-white dark:bg-dark-900 p-2 rounded-lg border border-sand-200 dark:border-dark-700">
-                                    <span className="text-orange-500 font-bold">•</span>
-                                    <span className="flex-1 truncate">{step}</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => removeSubtask(idx)}
-                                        className="text-dark-400 hover:text-red-500"
-                                    >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                    </button>
-                                </div>
-                            ))}
+                    <div className="space-y-3 p-4 bg-orange-50 dark:bg-orange-950/20 rounded-xl border border-orange-200 dark:border-orange-900/50">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-semibold uppercase tracking-wider text-orange-700 dark:text-orange-400">
+                                Subtasks
+                            </label>
+                            <span className="text-xs font-semibold text-orange-600 dark:text-orange-400">
+                                {subtasks.length} added
+                            </span>
                         </div>
+
+                        {subtasks.length > 0 && (
+                            <div className="space-y-1.5">
+                                {subtasks.map((step, idx) => (
+                                    <div key={idx} className="flex items-center gap-2 text-sm bg-white dark:bg-slate-800 px-3 py-2 rounded-lg border border-orange-100 dark:border-slate-700">
+                                        <span className="text-orange-500 font-bold text-xs">•</span>
+                                        <span className="flex-1 text-slate-700 dark:text-slate-300 truncate">{step}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeSubtask(idx)}
+                                            className="text-slate-400 hover:text-rose-500 transition-colors"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
                         <div className="flex gap-2">
                             <input
@@ -201,17 +196,17 @@ export function TaskForm({ task, onSave, onDelete, onCancel }: Props) {
                                 onChange={e => setSubtaskInput(e.target.value)}
                                 onKeyDown={e => {
                                     if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        handleAddSubtask(e);
+                                        e.preventDefault()
+                                        handleAddSubtask(e)
                                     }
                                 }}
-                                placeholder="Add a step..."
-                                className="flex-1 text-sm bg-white dark:bg-dark-900 border border-sand-200 dark:border-dark-700 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-orange-500/20"
+                                placeholder="Add a subtask..."
+                                className="flex-1 text-sm bg-white dark:bg-slate-800 border-orange-200 dark:border-slate-600 rounded-lg px-3 py-1.5 text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
                             />
                             <button
                                 type="button"
                                 onClick={handleAddSubtask}
-                                className="bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400 px-3 rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/40 transition-colors"
+                                className="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 px-3 rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors"
                             >
                                 <Plus className="h-4 w-4" />
                             </button>
@@ -219,51 +214,51 @@ export function TaskForm({ task, onSave, onDelete, onCancel }: Props) {
                     </div>
                 )}
 
-                {/* Edit Mode Helper for Subtasks */}
+                {/* Edit mode subtask hint */}
                 {task && (formData.priority === 'High' || formData.priority === 'Critical') && (
-                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-medium rounded-lg flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4" />
-                        Manage tactical steps in the Quest Details view.
+                    <div className="p-3 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 text-xs font-medium rounded-lg flex items-center gap-2 border border-blue-200 dark:border-blue-900/50">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
+                        Manage subtasks from the Task Details view.
                     </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
-                    {/* Time Block */}
-                    <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-dark-500">
+                {/* Start Time / Duration */}
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                        <label className={labelClass}>
                             <Clock className="h-3 w-3" /> Start Time
                         </label>
                         <input
                             type="time"
-                            className="w-full bg-white dark:bg-dark-900 border-sand-300 dark:border-dark-700 rounded-lg px-3 py-2 text-sm"
+                            className={inputClass}
                             value={formData.startTime || ""}
                             onChange={e => setFormData({ ...formData, startTime: e.target.value })}
                         />
                     </div>
 
-                    {/* Duration */}
-                    <div className="space-y-2">
-                        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-dark-500">
-                            <Timer className="h-3 w-3" /> Hours
+                    <div className="space-y-1.5">
+                        <label className={labelClass}>
+                            <Timer className="h-3 w-3" /> Duration (hrs)
                         </label>
                         <input
                             type="number"
                             min="1"
-                            className="w-full bg-white dark:bg-dark-900 border-sand-300 dark:border-dark-700 rounded-lg px-3 py-2 text-sm"
+                            max="24"
+                            className={inputClass}
                             value={formData.duration || 1}
-                            onChange={e => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+                            onChange={e => setFormData({ ...formData, duration: parseInt(e.target.value) || 1 })}
                         />
                     </div>
                 </div>
 
-                {/* Date Picker */}
-                <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-dark-500">
+                {/* Deadline */}
+                <div className="space-y-1.5">
+                    <label className={labelClass}>
                         <Calendar className="h-3 w-3" /> Deadline
                     </label>
                     <input
                         type="datetime-local"
-                        className="w-full bg-white dark:bg-dark-900 border-sand-300 dark:border-dark-700 rounded-lg px-3 py-2 text-sm font-mono"
+                        className={cn(inputClass, "font-mono")}
                         value={formData.deadline ? format(toZonedTime(new Date(formData.deadline), timeZone), "yyyy-MM-dd'T'HH:mm") : ""}
                         onChange={e => {
                             if (e.target.value) {
@@ -275,12 +270,13 @@ export function TaskForm({ task, onSave, onDelete, onCancel }: Props) {
                 </div>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-sand-200 dark:border-dark-700 mt-auto">
+            {/* Footer Actions */}
+            <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700 mt-auto shrink-0">
                 {task && onDelete && (
                     <button
                         type="button"
-                        onClick={() => { onDelete(task.id); onCancel(); }}
-                        className="flex items-center gap-2 text-status-overdue hover:text-red-700 dark:hover:text-red-400 text-sm font-medium px-4 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                        onClick={() => { onDelete(task.id); onCancel() }}
+                        className="flex items-center gap-2 text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 text-sm font-medium px-3 py-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors"
                     >
                         <Trash2 className="h-4 w-4" /> Delete
                     </button>
@@ -289,15 +285,15 @@ export function TaskForm({ task, onSave, onDelete, onCancel }: Props) {
                     <button
                         type="button"
                         onClick={onCancel}
-                        className="px-4 py-2 text-sm font-medium text-dark-500 hover:text-dark-900 dark:text-sand-300 dark:hover:text-white transition-colors"
+                        className="px-4 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
                     >
                         Cancel
                     </button>
                     <button
                         type="submit"
-                        className="flex items-center gap-2 bg-dark-900 text-white px-6 py-2 rounded-lg font-bold shadow-lg shadow-dark-900/20 hover:bg-dark-800 hover:scale-105 transition-all dark:bg-white dark:text-dark-900 dark:hover:bg-sand-200"
+                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg font-semibold text-sm shadow-sm transition-all hover:shadow-md active:scale-95"
                     >
-                        <Save className="h-4 w-4" /> Save Quest
+                        <Save className="h-4 w-4" /> Save
                     </button>
                 </div>
             </div>

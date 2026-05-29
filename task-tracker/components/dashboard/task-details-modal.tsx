@@ -17,17 +17,11 @@ export function TaskDetailsModal({ open, onClose, task, onEdit, zIndex }: Props)
 
     return (
         <Dialog open={open} zIndex={zIndex}>
-            <DialogContent onClose={onClose} className="sm:max-w-[450px] p-6 bg-white dark:bg-dark-800 border-none shadow-2xl">
-                {/* Hidden title for accessibility/structure, visual title is in TaskDetails */}
+            <DialogContent onClose={onClose} className="sm:max-w-[450px] p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-2xl">
                 <DialogHeader className="sr-only">
-                    <DialogTitle>Quest Details</DialogTitle>
+                    <DialogTitle>Task Details</DialogTitle>
                 </DialogHeader>
-
-                <TaskDetails
-                    task={task}
-                    onClose={onClose}
-                    onEdit={onEdit}
-                />
+                <TaskDetails task={task} onClose={onClose} onEdit={onEdit} />
             </DialogContent>
         </Dialog>
     )
