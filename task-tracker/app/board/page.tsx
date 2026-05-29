@@ -56,7 +56,19 @@ export default function BoardPage() {
         setIsModalOpen(false)
     }
 
-    if (!isLoaded) return null
+    if (!isLoaded) return (
+        <div className="flex h-screen bg-slate-100 dark:bg-slate-950 overflow-hidden">
+            <Sidebar />
+            <div className="flex-1 flex flex-col min-w-0">
+                <div className="h-[65px] bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 animate-pulse" />
+                <div className="flex-1 grid grid-cols-3 gap-4 p-6">
+                    {[1,2,3].map(i => (
+                        <div key={i} className="rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 animate-pulse" />
+                    ))}
+                </div>
+            </div>
+        </div>
+    )
 
     return (
         <div className="flex h-screen bg-slate-100 dark:bg-slate-950 font-sans overflow-hidden">
@@ -144,8 +156,18 @@ export default function BoardPage() {
                                                 {provided.placeholder}
 
                                                 {colTasks.length === 0 && (
-                                                    <div className="flex items-center justify-center py-10 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
-                                                        <span className="text-xs text-slate-400 dark:text-slate-600">Drop tasks here</span>
+                                                    <div className="flex flex-col items-center justify-center py-10 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg gap-2">
+                                                        <span className="text-xs text-slate-400 dark:text-slate-600">
+                                                            {snapshot.isDraggingOver ? 'Drop here' : 'No tasks'}
+                                                        </span>
+                                                        {col.id === 'To Do' && !snapshot.isDraggingOver && (
+                                                            <button
+                                                                onClick={() => { setEditingTask(undefined); setIsModalOpen(true) }}
+                                                                className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                                                            >
+                                                                + Add task
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>

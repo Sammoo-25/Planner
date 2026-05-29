@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 
 export function XpNotifier() {
     const { lastXpGain } = useGamificationContext()
-    const [notifications, setNotifications] = useState<{ amount: number; id: number }[]>([])
+    const [notifications, setNotifications] = useState<{ amount: number; id: string }[]>([])
 
     useEffect(() => {
         if (lastXpGain) {

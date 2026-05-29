@@ -3,10 +3,16 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
+interface User {
+    id: number;
+    name: string;
+    email: string;
+}
+
 interface AuthContextType {
-    user: any;
+    user: User | null;
     token: string | null;
-    login: (userData: any, token: string) => void;
+    login: (userData: User, token: string) => void;
     logout: () => void;
     isLoaded: boolean;
 }
@@ -14,7 +20,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [isLoaded, setIsLoaded] = useState(false);
     const router = useRouter();
@@ -23,13 +29,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const savedToken = localStorage.getItem('token');
         const savedUser = localStorage.getItem('user');
         if (savedToken && savedUser) {
-            setToken(savedToken);
-            setUser(JSON.parse(savedUser));
+            try {
+                setToken(savedToken);
+                setUser(JSON.parse(savedUser));
+            } catch {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+            }
         }
         setIsLoaded(true);
     }, []);
 
-    const login = (userData: any, token: string) => {
+    const login = (userData: User, token: string) => {
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(userData));
         setToken(token);
@@ -42,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem('user');
         setToken(null);
         setUser(null);
-        // Do not force redirect to sign-in, let the page handle guest state
+        router.push('/signin');
     };
 
     return (
@@ -54,8 +65,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
     const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error("useAuth must be used within an AuthProvider");
-    }
+    if (context === undefined) throw new Error("useAuth must be used within an AuthProvider");
     return context;
 }

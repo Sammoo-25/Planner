@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
@@ -11,7 +10,6 @@ export default function SignUpPage() {
     const [formData, setFormData] = useState({ name: '', email: '', password: '' })
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
-    const router = useRouter()
     const { login } = useAuth()
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -21,8 +19,7 @@ export default function SignUpPage() {
         try {
             const data = await api.signup(formData)
             if (data.token) {
-                login(data.user, data.token)
-                router.push('/')
+                login(data.user, data.token) // AuthContext.login handles the redirect
             } else {
                 setError(data.message || 'Sign-up failed. Please try again.')
             }

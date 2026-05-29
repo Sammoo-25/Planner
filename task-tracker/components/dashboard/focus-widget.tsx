@@ -21,7 +21,7 @@ export function FocusWidget({ tasks }: Props) {
     const timeLeft = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 
     return (
-        <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-right-10 fade-in duration-300">
+        <div className="fixed bottom-20 md:bottom-6 right-6 z-[100] animate-in slide-in-from-right-10 fade-in duration-300">
             <button
                 onClick={openModal}
                 className="group flex items-center gap-3 bg-slate-900 dark:bg-slate-800 px-4 py-2.5 rounded-2xl shadow-xl border border-slate-700/50 hover:scale-105 active:scale-95 transition-all text-white"

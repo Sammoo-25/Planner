@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import { useGamification } from "@/hooks/use-gamification"
 import { useTaskStore } from "@/hooks/use-tasks"
-import { useQuestManager } from "@/hooks/use-quest-manager"
+import { useQuestManager, calculateTaskXp } from "@/hooks/use-quest-manager"
 import { useAuth } from "@/context/AuthContext"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { TaskItem } from "@/components/dashboard/task-item"
@@ -12,8 +12,9 @@ import { TaskDetailsModal } from "@/components/dashboard/task-details-modal"
 import { Task } from "@/types"
 import {
   Plus, Target, Trophy, ListFilter, Star, Zap, Heart,
-  CheckCircle2, BarChart3
+  CheckCircle2, BarChart3, LogIn, UserPlus, Sword
 } from "lucide-react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useFocus } from "@/context/FocusContext"
 import { getHeroRank } from "@/lib/hero-rank-utils"
@@ -27,6 +28,79 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 type SortOption = 'Difficulty' | 'Status' | 'Category' | 'Title'
+
+const XP_REWARDS = [
+  { label: "Critical task", xp: "75 XP", color: "text-rose-600 dark:text-rose-400", dot: "bg-rose-500" },
+  { label: "High priority", xp: "50 XP", color: "text-orange-600 dark:text-orange-400", dot: "bg-orange-500" },
+  { label: "Standard task", xp: "20 XP", color: "text-indigo-600 dark:text-indigo-400", dot: "bg-indigo-500" },
+  { label: "Focus session", xp: "Dynamic", color: "text-emerald-600 dark:text-emerald-400", dot: "bg-emerald-500" },
+]
+
+function DashboardSkeleton() {
+  return (
+    <div className="flex h-screen bg-slate-100 dark:bg-slate-950 overflow-hidden">
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <div className="h-[65px] bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 animate-pulse" />
+        <div className="h-[52px] bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 animate-pulse" />
+        <div className="flex-1 px-6 pt-5 space-y-2">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-16 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" style={{ opacity: 1 - i * 0.15 }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function GuestState() {
+  return (
+    <div className="flex h-screen bg-slate-100 dark:bg-slate-950 overflow-hidden">
+      <Sidebar />
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="max-w-sm w-full text-center">
+          <div className="h-16 w-16 rounded-2xl bg-indigo-600 flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <Sword className="h-8 w-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+            Life RPG Planner
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mb-8 leading-relaxed">
+            Turn your tasks into quests. Earn XP, level up, and track your productivity like a game.
+          </p>
+          <div className="flex flex-col gap-3">
+            <Link
+              href="/signup"
+              className="flex items-center justify-center gap-2 w-full px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-colors shadow-sm"
+            >
+              <UserPlus className="h-4 w-4" />
+              Create Free Account
+            </Link>
+            <Link
+              href="/signin"
+              className="flex items-center justify-center gap-2 w-full px-5 py-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium text-sm transition-colors"
+            >
+              <LogIn className="h-4 w-4" />
+              Sign In
+            </Link>
+          </div>
+          <div className="mt-8 grid grid-cols-3 gap-4 text-center">
+            {[
+              { label: "Task tracking", icon: "✓" },
+              { label: "XP & levels", icon: "⚡" },
+              { label: "Focus timer", icon: "🎯" },
+            ].map(f => (
+              <div key={f.label} className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <div className="text-xl mb-1">{f.icon}</div>
+                <div className="text-xs font-medium text-slate-600 dark:text-slate-400">{f.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function Dashboard() {
   const { tasks, addTask, removeTask, isLoaded } = useTaskStore()
@@ -55,12 +129,9 @@ export default function Dashboard() {
           const w = { 'In Progress': 2, 'To Do': 1, 'Done': 0 } as const
           return (w[b.status as keyof typeof w] ?? 0) - (w[a.status as keyof typeof w] ?? 0)
         }
-        case 'Category':
-          return a.category.localeCompare(b.category)
-        case 'Title':
-          return a.title.localeCompare(b.title)
-        default:
-          return 0
+        case 'Category': return a.category.localeCompare(b.category)
+        case 'Title':    return a.title.localeCompare(b.title)
+        default: return 0
       }
     })
   }, [activeTasks, sortBy])
@@ -70,7 +141,6 @@ export default function Dashboard() {
       saveQuest(editingTask, taskData)
     } else {
       addTask({
-        id: Math.random().toString(),
         title: taskData.title || "New Task",
         category: taskData.category || "General",
         priority: taskData.priority || "Medium",
@@ -86,7 +156,8 @@ export default function Dashboard() {
   const xpPercent = Math.min(100, Math.round((stats.currentExp / stats.maxExp) * 100))
   const heroRank = getHeroRank(stats.level)
 
-  if (!isLoaded) return null
+  if (!isLoaded) return <DashboardSkeleton />
+  if (!user) return <GuestState />
 
   return (
     <div className="flex h-screen bg-slate-100 dark:bg-slate-950 font-sans overflow-hidden">
@@ -104,7 +175,7 @@ export default function Dashboard() {
             />
             <div>
               <div className="font-semibold text-slate-900 dark:text-white text-sm leading-tight">
-                {user?.name || "Hero"}
+                {user.name}
               </div>
               <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                 <span className="font-medium text-indigo-600 dark:text-indigo-400">{heroRank.title}</span>
@@ -115,11 +186,7 @@ export default function Dashboard() {
           </div>
 
           <button
-            onClick={() => {
-              if (!user) { alert("Sign in to create tasks."); return }
-              setEditingTask(undefined)
-              setIsModalOpen(true)
-            }}
+            onClick={() => { setEditingTask(undefined); setIsModalOpen(true) }}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors shadow-sm"
           >
             <Plus className="h-4 w-4" />
@@ -142,10 +209,7 @@ export default function Dashboard() {
                 </span>
               </div>
               <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-indigo-500 rounded-full transition-all duration-700"
-                  style={{ width: `${xpPercent}%` }}
-                />
+                <div className="h-full bg-indigo-500 rounded-full transition-all duration-700" style={{ width: `${xpPercent}%` }} />
               </div>
             </div>
           </div>
@@ -158,13 +222,11 @@ export default function Dashboard() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Health</span>
-                <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 tabular-nums">
-                  {stats.health}%
-                </span>
+                <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 tabular-nums">{stats.health}%</span>
               </div>
               <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-rose-500 rounded-full transition-all duration-700"
+                  className={`h-full rounded-full transition-all duration-700 ${stats.health < 30 ? 'bg-rose-500' : 'bg-emerald-500'}`}
                   style={{ width: `${stats.health}%` }}
                 />
               </div>
@@ -195,13 +257,10 @@ export default function Dashboard() {
         <div className="flex-1 flex min-h-0 overflow-hidden">
           {/* Main task list */}
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-            {/* List header */}
             <div className="shrink-0 flex items-center justify-between px-6 pt-5 pb-3">
               <h2 className="font-semibold text-slate-800 dark:text-slate-200 text-sm">
                 Active Tasks
-                <span className="ml-2 text-xs font-normal text-slate-400 dark:text-slate-500">
-                  {activeTasks.length}
-                </span>
+                <span className="ml-2 text-xs font-normal text-slate-400 dark:text-slate-500">{activeTasks.length}</span>
               </h2>
 
               <DropdownMenu>
@@ -222,15 +281,10 @@ export default function Dashboard() {
               </DropdownMenu>
             </div>
 
-            {/* Scrollable list */}
             <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-2 custom-scrollbar">
               {activeTasks.length > 0 ? (
                 sortedActiveTasks.map(task => (
-                  <div
-                    key={task.id}
-                    onClick={() => setViewingTask(task)}
-                    className="cursor-pointer"
-                  >
+                  <div key={task.id} onClick={() => setViewingTask(task)} className="cursor-pointer">
                     <TaskItem
                       task={task}
                       onComplete={toggleTaskStatus}
@@ -243,10 +297,17 @@ export default function Dashboard() {
                   <div className="h-14 w-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
                     <Trophy className="h-7 w-7 text-slate-300 dark:text-slate-600" />
                   </div>
-                  <h3 className="font-semibold text-slate-600 dark:text-slate-400 mb-1 text-sm">All clear</h3>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 max-w-[180px] leading-relaxed">
-                    No active tasks. Add one to get started.
+                  <h3 className="font-semibold text-slate-600 dark:text-slate-400 mb-1 text-sm">Quest log empty</h3>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 max-w-[180px] leading-relaxed mb-4">
+                    You have no active tasks. Create your first quest to start earning XP.
                   </p>
+                  <button
+                    onClick={() => { setEditingTask(undefined); setIsModalOpen(true) }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium transition-colors shadow-sm"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    New Task
+                  </button>
                 </div>
               )}
             </div>
@@ -254,7 +315,6 @@ export default function Dashboard() {
 
           {/* Right panel */}
           <aside className="hidden xl:flex flex-col w-64 shrink-0 border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-y-auto custom-scrollbar">
-            {/* Quick actions */}
             <div className="p-5 border-b border-slate-200 dark:border-slate-800">
               <h3 className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
                 Quick Actions
@@ -288,18 +348,13 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* XP reference */}
+            {/* XP reference — values now match actual useQuestManager awards */}
             <div className="p-5 border-b border-slate-200 dark:border-slate-800">
               <h3 className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
                 XP Rewards
               </h3>
               <div className="space-y-2.5">
-                {[
-                  { label: "Critical", xp: "75 XP", color: "text-rose-600 dark:text-rose-400", dot: "bg-rose-500" },
-                  { label: "High priority", xp: "50 XP", color: "text-orange-600 dark:text-orange-400", dot: "bg-orange-500" },
-                  { label: "Standard", xp: "20 XP", color: "text-indigo-600 dark:text-indigo-400", dot: "bg-indigo-500" },
-                  { label: "Focus session", xp: "Dynamic", color: "text-emerald-600 dark:text-emerald-400", dot: "bg-emerald-500" },
-                ].map(item => (
+                {XP_REWARDS.map(item => (
                   <div key={item.label} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className={`h-1.5 w-1.5 rounded-full ${item.dot}`} />
@@ -332,9 +387,7 @@ export default function Dashboard() {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-slate-400 dark:text-slate-600">
-                  No completed tasks yet.
-                </p>
+                <p className="text-xs text-slate-400 dark:text-slate-600">No completed tasks yet.</p>
               )}
             </div>
           </aside>

@@ -180,9 +180,9 @@ export default function CalendarPage() {
                         ))}
                     </div>
 
-                    {/* Days Grid */}
-                    <div className="flex-1 grid grid-cols-7 min-h-0">
-                        {calendarDays.slice(0, 35).map((day) => {
+                    {/* Days Grid — dynamic rows (5 or 6 weeks depending on month) */}
+                    <div className="flex-1 grid grid-cols-7 min-h-0" style={{ gridTemplateRows: `repeat(${Math.ceil(calendarDays.length / 7)}, 1fr)` }}>
+                        {calendarDays.map((day) => {
                             const dayId = format(day, 'yyyy-MM-dd')
                             const dayTasks = tasksByDate[dayId] || []
                             const isCurrentMonth = day.getMonth() === currentDate.getMonth()

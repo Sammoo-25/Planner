@@ -116,7 +116,18 @@ export default function PlannerPage() {
         setIsModalOpen(false)
     }
 
-    if (!isLoaded) return null
+    if (!isLoaded) return (
+        <div className="flex h-screen bg-slate-100 dark:bg-slate-950 overflow-hidden">
+            <Sidebar />
+            <div className="flex-1 flex flex-col">
+                <div className="h-[140px] bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 animate-pulse" />
+                <div className="flex-1 grid grid-cols-12 gap-4 p-4">
+                    <div className="col-span-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 animate-pulse" />
+                    <div className="col-span-7 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 animate-pulse" />
+                </div>
+            </div>
+        </div>
+    )
 
     return (
         <div className="flex h-screen bg-slate-100 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 overflow-hidden">

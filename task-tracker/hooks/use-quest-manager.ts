@@ -5,25 +5,25 @@ import { useTaskStore } from "./use-tasks"
 import { useGamification } from "./use-gamification"
 import { Task } from "@/types"
 
+/** XP values by priority — single source of truth used by both award and deduct logic */
+export function calculateTaskXp(task: Pick<Task, 'priority' | 'completedSubtaskCount'>): number {
+    let base = 20
+    if (task.priority === 'Critical') base = 75
+    else if (task.priority === 'High') base = 50
+    else if (task.priority === 'Low') base = 10
+
+    const subtaskBonus = (task.completedSubtaskCount ?? 0) * 5
+    return base + subtaskBonus
+}
+
 export function useQuestManager() {
     const { updateTask, tasks } = useTaskStore()
     const { addExp, heal } = useGamification()
 
     const awardTaskXp = useCallback((task: Task) => {
-        let amount = 20 // Default
-        if (task.priority === "High" || task.priority === "Critical") {
-            amount = 50
-        } else if (task.priority === "Low") {
-            amount = 10
-        }
-
-        // Add deferred subtask XP
-        if (task.completedSubtaskCount && task.completedSubtaskCount > 0) {
-            amount += (task.completedSubtaskCount * 5)
-        }
-
+        const amount = calculateTaskXp(task)
         addExp(amount)
-        heal(5) // Small heal on completion
+        heal(5)
     }, [addExp, heal])
 
     const toggleTaskStatus = useCallback((id: string) => {
@@ -39,34 +39,19 @@ export function useQuestManager() {
             awardTaskXp(task)
         } else if (task.status === 'Done') {
             newStatus = 'To Do'
-            // Deduct XP on undo
-            let amount = 20
-            if (task.priority === "High" || task.priority === "Critical") {
-                amount = 50
-            } else if (task.priority === "Low") {
-                amount = 10
-            }
-            if (task.completedSubtaskCount && task.completedSubtaskCount > 0) {
-                amount += (task.completedSubtaskCount * 5)
-            }
-            addExp(-amount)
+            addExp(-calculateTaskXp(task)) // deduct same amount that was awarded
         }
 
         updateTask(id, { status: newStatus })
     }, [tasks, updateTask, awardTaskXp, addExp])
 
     const saveQuest = useCallback((task: Task | undefined, updates: Partial<Task>) => {
-        if (task) {
-            // Check if it was transition to Done
-            const isFinishing = updates.status === 'Done' && task.status !== 'Done'
-            updateTask(task.id, updates)
-            if (isFinishing) {
-                // We need the full task to get priority if it wasn't in updates
-                const fullTask = { ...task, ...updates }
-                awardTaskXp(fullTask)
-            }
+        if (!task) return
+        const isFinishing = updates.status === 'Done' && task.status !== 'Done'
+        updateTask(task.id, updates)
+        if (isFinishing) {
+            awardTaskXp({ ...task, ...updates })
         }
-        // addTask is still handled in components for simplicity or can be added here
     }, [updateTask, awardTaskXp])
 
     return { toggleTaskStatus, awardTaskXp, saveQuest }
