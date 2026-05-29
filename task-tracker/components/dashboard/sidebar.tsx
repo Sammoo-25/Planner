@@ -25,15 +25,15 @@ export function Sidebar() {
     return (
         <>
             {/* Desktop Sidebar */}
-            <aside className="hidden w-56 shrink-0 flex-col border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 md:flex z-50">
+            <aside className="hidden md:flex w-56 shrink-0 flex-col bg-white dark:bg-[#0d1526] border-r border-slate-200/60 dark:border-slate-800/60 z-50">
                 {/* Logo */}
-                <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-200 dark:border-slate-800">
-                    <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
+                <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-200/60 dark:border-slate-800/60">
+                    <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 shadow-[0_2px_8px_rgba(99,102,241,0.4)]">
                         <Sword className="h-4 w-4 text-white" />
                     </div>
                     <div className="min-w-0">
-                        <div className="font-semibold text-slate-900 dark:text-white text-sm leading-tight">Life RPG</div>
-                        <div className="text-[11px] text-slate-400 dark:text-slate-500 leading-tight">Planner</div>
+                        <div className="font-bold text-slate-900 dark:text-white text-sm leading-tight tracking-tight">Life RPG</div>
+                        <div className="text-[11px] text-slate-400 dark:text-slate-500 leading-tight font-medium">Planner</div>
                     </div>
                 </div>
 
@@ -43,7 +43,7 @@ export function Sidebar() {
                         <NavItem
                             key={item.href}
                             href={item.href}
-                            icon={<item.icon className="h-4 w-4" />}
+                            icon={<item.icon className="h-[17px] w-[17px]" />}
                             label={item.label}
                             active={pathname === item.href}
                         />
@@ -51,7 +51,7 @@ export function Sidebar() {
                 </nav>
 
                 {/* Bottom section */}
-                <div className="px-3 py-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                <div className="px-3 py-3 border-t border-slate-200/60 dark:border-slate-800/60 space-y-3">
                     <div className="px-1">
                         <ModeToggle />
                     </div>
@@ -59,19 +59,26 @@ export function Sidebar() {
                     <div className="space-y-0.5">
                         {user ? (
                             <>
-                                <NavItem href="/settings" icon={<Settings className="h-4 w-4" />} label="Settings" active={pathname === '/settings'} />
+                                <NavItem
+                                    href="/settings"
+                                    icon={<Settings className="h-[17px] w-[17px]" />}
+                                    label="Settings"
+                                    active={pathname === '/settings'}
+                                />
                                 <button
                                     onClick={logout}
-                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-600 dark:hover:text-rose-400 transition-all group"
                                 >
-                                    <LogOut className="h-4 w-4" />
+                                    <span className="text-slate-400 dark:text-slate-500 group-hover:text-rose-500 transition-colors">
+                                        <LogOut className="h-[17px] w-[17px]" />
+                                    </span>
                                     Sign Out
                                 </button>
                             </>
                         ) : (
                             <>
-                                <NavItem href="/signin"  icon={<LogIn    className="h-4 w-4" />} label="Sign In"        active={pathname === '/signin'}  />
-                                <NavItem href="/signup"  icon={<UserPlus className="h-4 w-4" />} label="Create Account" active={pathname === '/signup'}  />
+                                <NavItem href="/signin"  icon={<LogIn    className="h-[17px] w-[17px]" />} label="Sign In"        active={pathname === '/signin'}  />
+                                <NavItem href="/signup"  icon={<UserPlus className="h-[17px] w-[17px]" />} label="Create Account" active={pathname === '/signup'}  />
                             </>
                         )}
                     </div>
@@ -79,7 +86,7 @@ export function Sidebar() {
             </aside>
 
             {/* Mobile Bottom Nav */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-2 py-1 safe-area-bottom">
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center bg-white/95 dark:bg-[#0d1526]/95 backdrop-blur-md border-t border-slate-200/60 dark:border-slate-800/60 px-2 py-1.5">
                 {NAV_ITEMS.map(item => {
                     const active = pathname === item.href
                     return (
@@ -87,14 +94,14 @@ export function Sidebar() {
                             key={item.href}
                             href={item.href}
                             className={cn(
-                                "flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-lg transition-colors",
+                                "flex-1 flex flex-col items-center gap-0.5 py-1 rounded-xl transition-all",
                                 active
                                     ? "text-indigo-600 dark:text-indigo-400"
-                                    : "text-slate-400 dark:text-slate-500"
+                                    : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400"
                             )}
                         >
                             <item.icon className="h-5 w-5" />
-                            <span className="text-[9px] font-medium">{item.label}</span>
+                            <span className={cn("text-[9px] font-semibold", active && "text-indigo-600 dark:text-indigo-400")}>{item.label}</span>
                         </Link>
                     )
                 })}
@@ -113,14 +120,22 @@ function NavItem({ icon, label, href, active }: {
         <Link
             href={href}
             className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                "relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
                 active
-                    ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400"
-                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
+                    ? [
+                        "bg-gradient-to-r from-indigo-50 to-violet-50/60 dark:from-indigo-950/40 dark:to-violet-950/20",
+                        "text-indigo-700 dark:text-indigo-400",
+                        "shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:shadow-none",
+                      ].join(' ')
+                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-100"
             )}
         >
+            {/* Left accent bar for active */}
+            {active && (
+                <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-gradient-to-b from-indigo-500 to-violet-500" />
+            )}
             <span className={cn(
-                "shrink-0",
+                "shrink-0 transition-colors",
                 active ? "text-indigo-600 dark:text-indigo-400" : "text-slate-400 dark:text-slate-500"
             )}>
                 {icon}

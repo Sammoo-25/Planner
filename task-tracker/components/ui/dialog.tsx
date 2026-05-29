@@ -18,10 +18,15 @@ const Dialog = ({
     if (!open) return null
     return (
         <div
-            className={cn("fixed inset-0 flex items-center justify-center transition-all", className)}
-            style={{ zIndex, backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}
+            className={cn("fixed inset-0 flex items-center justify-center p-4", className)}
+            style={{
+                zIndex,
+                background: 'rgba(2, 6, 30, 0.72)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+            }}
         >
-            <div className="animate-in fade-in zoom-in-95 duration-200">
+            <div className="animate-modal-in w-full flex justify-center">
                 {children}
             </div>
         </div>
@@ -35,7 +40,9 @@ const DialogContent = React.forwardRef<
     <div
         ref={ref}
         className={cn(
-            "relative min-w-[400px] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-xl",
+            "relative rounded-2xl bg-white dark:bg-[#0d1526] border border-slate-200/70 dark:border-slate-700/40",
+            "shadow-[0_32px_72px_rgba(0,0,0,0.14),0_8px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_32px_72px_rgba(0,0,0,0.5),0_8px_24px_rgba(0,0,0,0.3)]",
+            "min-w-[340px]",
             className
         )}
         {...props}
@@ -43,9 +50,9 @@ const DialogContent = React.forwardRef<
         {onClose && (
             <button
                 onClick={onClose}
-                className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                className="absolute right-4 top-4 z-10 h-7 w-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
             >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
                 <span className="sr-only">Close</span>
             </button>
         )}
@@ -58,10 +65,7 @@ const DialogHeader = ({
     className,
     ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-    <div
-        className={cn("mb-4 flex flex-col space-y-1.5 text-center sm:text-left", className)}
-        {...props}
-    />
+    <div className={cn("flex flex-col space-y-1", className)} {...props} />
 )
 DialogHeader.displayName = "DialogHeader"
 
@@ -71,7 +75,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
     <h3
         ref={ref}
-        className={cn("text-lg font-semibold leading-none tracking-tight", className)}
+        className={cn("font-semibold leading-tight tracking-tight text-slate-900 dark:text-white", className)}
         {...props}
     />
 ))
