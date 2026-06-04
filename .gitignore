@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+ai-agents/venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Environment files — never commit secrets
+.env
+.env.local
+.env.*.local
+backend/.env
+ai-agents/.env
+
+# Build output
+task-tracker/.next/
+task-tracker/out/
+
+# Test artifacts
+test_screenshots/
+ai-agents/reports/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+/tmp/

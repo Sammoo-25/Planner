@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react"
 import { useGamification } from "@/hooks/use-gamification"
+import { api } from "@/lib/api"
 
 interface FocusContextType {
     isActive: boolean
@@ -78,6 +79,8 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
             setIsActive(false)
             if (phase === 'work') {
                 addFocusSession(selectedTaskId, workDuration, calculatedReward)
+                // Persist to DB — fire-and-forget, never blocks the timer
+                api.saveFocusSession(selectedTaskId || null, workDuration, calculatedReward).catch(() => {})
                 setNotification({ message: "Quest Victory! XP Gained.", type: 'victory' })
                 setPhase('break')
                 setSeconds(5 * 60)

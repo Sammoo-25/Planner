@@ -17,7 +17,9 @@ export const metadata: Metadata = {
 import { FocusProvider } from "@/context/FocusContext";
 import { TaskProvider } from "@/context/TaskContext";
 import { GamificationProvider } from "@/context/GamificationContext";
+import { AgentProvider } from "@/context/AgentContext";
 import { GlobalFocusSystem } from "@/components/dashboard/global-focus-system";
+import { AgentChat } from "@/components/agent/AgentChat";
 import { AuthProvider } from "@/context/AuthContext";
 
 export default function RootLayout({
@@ -41,8 +43,11 @@ export default function RootLayout({
             <TaskProvider>
               <GamificationProvider>
                 <FocusProvider>
-                  {children}
-                  <GlobalFocusSystem />
+                  <AgentProvider>
+                    {children}
+                    <GlobalFocusSystem />
+                    <AgentChat />
+                  </AgentProvider>
                 </FocusProvider>
               </GamificationProvider>
             </TaskProvider>

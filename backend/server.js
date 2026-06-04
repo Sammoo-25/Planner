@@ -275,6 +275,361 @@ router.get('/health', (req, res) => {
     res.json({ status: 'OK' });
 });
 
+// --- Focus Sessions ---
+
+router.post('/focus-sessions', authenticateToken, async (req, res) => {
+    const { task_id, duration_minutes, xp_earned } = req.body;
+    if (!duration_minutes || !xp_earned) {
+        return res.status(400).json({ message: "duration_minutes and xp_earned are required" });
+    }
+    try {
+        const session = await db.query(
+            `INSERT INTO focus_sessions (user_id, task_id, duration_minutes, xp_earned)
+             VALUES ($1, $2, $3, $4) RETURNING *`,
+            [req.user.userId, task_id || null, duration_minutes, xp_earned]
+        );
+        // Log event for agent analytics
+        await db.query(
+            `INSERT INTO events (user_id, event_type, payload) VALUES ($1, 'focus_complete', $2)`,
+            [req.user.userId, JSON.stringify({ duration_minutes, xp_earned, task_id: task_id || null })]
+        ).catch(err => console.error("Event log failed:", err));
+
+        res.status(201).json(session.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+router.get('/focus-sessions', authenticateToken, async (req, res) => {
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    try {
+        const sessions = await db.query(
+            `SELECT * FROM focus_sessions WHERE user_id = $1 ORDER BY completed_at DESC LIMIT $2`,
+            [req.user.userId, limit]
+        );
+        res.json(sessions.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+// --- Daily Quests ---
+
+router.get('/daily-quests', authenticateToken, async (req, res) => {
+    try {
+        const quests = await db.query(
+            `SELECT * FROM daily_quests
+             WHERE user_id = $1 AND expires_at > NOW()
+             ORDER BY created_at ASC`,
+            [req.user.userId]
+        );
+        res.json(quests.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+router.put('/daily-quests/:id/complete', authenticateToken, async (req, res) => {
+    try {
+        const result = await db.query(
+            `UPDATE daily_quests SET is_completed = TRUE, completed_at = NOW()
+             WHERE id = $1 AND user_id = $2 AND is_completed = FALSE RETURNING *`,
+            [req.params.id, req.user.userId]
+        );
+        if (result.rowCount === 0) return res.status(404).json({ message: "Quest not found or already completed" });
+
+        await db.query(
+            `INSERT INTO events (user_id, event_type, payload) VALUES ($1, 'daily_quest_complete', $2)`,
+            [req.user.userId, JSON.stringify({ quest_id: req.params.id, xp_reward: result.rows[0].xp_reward })]
+        ).catch(err => console.error("Event log failed:", err));
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+// --- Achievements ---
+
+router.get('/achievements', authenticateToken, async (req, res) => {
+    try {
+        const achievements = await db.query(
+            `SELECT * FROM user_achievements WHERE user_id = $1 ORDER BY unlocked_at DESC`,
+            [req.user.userId]
+        );
+        res.json(achievements.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+router.post('/achievements', authenticateToken, async (req, res) => {
+    const { achievement_key, achievement_title, achievement_description, xp_reward } = req.body;
+    if (!achievement_key || !achievement_title) {
+        return res.status(400).json({ message: "achievement_key and achievement_title are required" });
+    }
+    try {
+        const result = await db.query(
+            `INSERT INTO user_achievements (user_id, achievement_key, achievement_title, achievement_description, xp_reward)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (user_id, achievement_key) DO NOTHING RETURNING *`,
+            [req.user.userId, achievement_key, achievement_title, achievement_description || null, xp_reward || 0]
+        );
+        if (result.rowCount === 0) {
+            return res.status(409).json({ message: "Achievement already unlocked" });
+        }
+
+        await db.query(
+            `INSERT INTO events (user_id, event_type, payload) VALUES ($1, 'achievement_unlock', $2)`,
+            [req.user.userId, JSON.stringify({ achievement_key, xp_reward: xp_reward || 0 })]
+        ).catch(err => console.error("Event log failed:", err));
+
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+// --- User Preferences ---
+
+router.get('/preferences', authenticateToken, async (req, res) => {
+    try {
+        const prefs = await db.query(
+            `SELECT * FROM user_preferences WHERE user_id = $1`,
+            [req.user.userId]
+        );
+        if (prefs.rowCount === 0) {
+            return res.json({
+                user_id: req.user.userId,
+                timezone: 'UTC',
+                focus_duration_minutes: 25,
+                daily_quest_count: 5,
+                difficulty: 'Normal',
+                companion_name: 'Sage',
+                notifications_enabled: true
+            });
+        }
+        res.json(prefs.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+router.put('/preferences', authenticateToken, async (req, res) => {
+    const { timezone, focus_duration_minutes, daily_quest_count, difficulty, companion_name, notifications_enabled } = req.body;
+    try {
+        const result = await db.query(
+            `INSERT INTO user_preferences (user_id, timezone, focus_duration_minutes, daily_quest_count, difficulty, companion_name, notifications_enabled)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (user_id) DO UPDATE SET
+               timezone = COALESCE(EXCLUDED.timezone, user_preferences.timezone),
+               focus_duration_minutes = COALESCE(EXCLUDED.focus_duration_minutes, user_preferences.focus_duration_minutes),
+               daily_quest_count = COALESCE(EXCLUDED.daily_quest_count, user_preferences.daily_quest_count),
+               difficulty = COALESCE(EXCLUDED.difficulty, user_preferences.difficulty),
+               companion_name = COALESCE(EXCLUDED.companion_name, user_preferences.companion_name),
+               notifications_enabled = COALESCE(EXCLUDED.notifications_enabled, user_preferences.notifications_enabled),
+               updated_at = CURRENT_TIMESTAMP
+             RETURNING *`,
+            [req.user.userId, timezone || 'UTC', focus_duration_minutes || 25, daily_quest_count || 5, difficulty || 'Normal', companion_name || 'Sage', notifications_enabled !== undefined ? notifications_enabled : true]
+        );
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+// --- Habits ---
+
+router.get('/habits', authenticateToken, async (req, res) => {
+    try {
+        const habits = await db.query(
+            `SELECT h.*,
+               (SELECT COUNT(*) FROM habit_checkins WHERE habit_id = h.id) as total_checkins
+             FROM habits h
+             WHERE h.user_id = $1 AND h.is_active = TRUE
+             ORDER BY h.created_at ASC`,
+            [req.user.userId]
+        );
+        res.json(habits.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+router.post('/habits', authenticateToken, async (req, res) => {
+    const { title, description, category, frequency, target_count, xp_reward } = req.body;
+    if (!title) return res.status(400).json({ message: "title is required" });
+    try {
+        const habit = await db.query(
+            `INSERT INTO habits (user_id, title, description, category, frequency, target_count, xp_reward)
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            [req.user.userId, title, description || null, category || null, frequency || 'daily', target_count || 1, xp_reward || 15]
+        );
+        res.status(201).json(habit.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+router.put('/habits/:id/checkin', authenticateToken, async (req, res) => {
+    const { notes } = req.body;
+    try {
+        // Verify ownership
+        const habitCheck = await db.query(
+            `SELECT * FROM habits WHERE id = $1 AND user_id = $2`,
+            [req.params.id, req.user.userId]
+        );
+        if (habitCheck.rowCount === 0) return res.status(404).json({ message: "Habit not found" });
+
+        const habit = habitCheck.rows[0];
+
+        // Record the check-in
+        await db.query(
+            `INSERT INTO habit_checkins (habit_id, user_id, notes) VALUES ($1, $2, $3)`,
+            [req.params.id, req.user.userId, notes || null]
+        );
+
+        // Compute new streak: check if last check-in was yesterday or today
+        const now = new Date();
+        const lastCheckin = habit.last_checked_in ? new Date(habit.last_checked_in) : null;
+        let newStreak = habit.current_streak;
+
+        if (!lastCheckin) {
+            newStreak = 1;
+        } else {
+            const msPerDay = 86400000;
+            const daysDiff = Math.floor((now - lastCheckin) / msPerDay);
+            if (daysDiff <= 1) {
+                newStreak = habit.current_streak + 1;
+            } else {
+                newStreak = 1; // streak broken
+            }
+        }
+
+        const longestStreak = Math.max(newStreak, habit.longest_streak);
+
+        const updated = await db.query(
+            `UPDATE habits SET current_streak = $1, longest_streak = $2, last_checked_in = NOW()
+             WHERE id = $3 RETURNING *`,
+            [newStreak, longestStreak, req.params.id]
+        );
+
+        await db.query(
+            `INSERT INTO events (user_id, event_type, payload) VALUES ($1, 'habit_checkin', $2)`,
+            [req.user.userId, JSON.stringify({ habit_id: req.params.id, streak: newStreak })]
+        ).catch(err => console.error("Event log failed:", err));
+
+        res.json({ habit: updated.rows[0], streak: newStreak });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+router.put('/habits/:id', authenticateToken, async (req, res) => {
+    const { title, description, category, frequency, target_count, xp_reward, is_active } = req.body;
+    try {
+        const result = await db.query(
+            `UPDATE habits SET
+               title = COALESCE($1, title),
+               description = COALESCE($2, description),
+               category = COALESCE($3, category),
+               frequency = COALESCE($4, frequency),
+               target_count = COALESCE($5, target_count),
+               xp_reward = COALESCE($6, xp_reward),
+               is_active = COALESCE($7, is_active)
+             WHERE id = $8 AND user_id = $9 RETURNING *`,
+            [title, description, category, frequency, target_count, xp_reward, is_active, req.params.id, req.user.userId]
+        );
+        if (result.rowCount === 0) return res.status(404).json({ message: "Habit not found" });
+        res.json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+// --- Events (internal — used by agent service) ---
+
+router.post('/events', async (req, res) => {
+    const secret = req.headers['x-internal-secret'];
+    if (!secret || secret !== process.env.AGENT_SERVICE_SECRET) {
+        return res.status(403).json({ message: "Forbidden" });
+    }
+    const { user_id, event_type, payload } = req.body;
+    if (!user_id || !event_type) {
+        return res.status(400).json({ message: "user_id and event_type are required" });
+    }
+    try {
+        await db.query(
+            `INSERT INTO events (user_id, event_type, payload) VALUES ($1, $2, $3::jsonb)`,
+            [user_id, event_type, payload ? JSON.stringify(payload) : null]
+        );
+        res.status(201).json({ status: "logged" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+// --- Agent Proxy Routes ---
+// These forward requests to the agent service so the frontend only needs one base URL.
+
+const getAgentServiceUrl = () => process.env.AGENT_SERVICE_URL || 'http://localhost:8000';
+
+async function proxyToAgent(req, res, agentPath) {
+    try {
+        const url = `${getAgentServiceUrl()}${agentPath}`;
+        const options = {
+            method: req.method,
+            headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': String(req.user.userId),
+                'x-internal-secret': process.env.AGENT_SERVICE_SECRET || ''
+            }
+        };
+        if (req.method !== 'GET') {
+            options.body = JSON.stringify(req.body);
+        }
+
+        // Dynamic import of node-fetch or use built-in fetch (Node 18+)
+        const response = await fetch(url, options);
+        const data = await response.json();
+        res.status(response.status).json(data);
+    } catch (err) {
+        console.error("Agent proxy error:", err.message);
+        res.status(503).json({ message: "Agent service unavailable", fallback: true });
+    }
+}
+
+router.post('/agent/chat', authenticateToken, (req, res) => proxyToAgent(req, res, '/agent/chat'));
+router.get('/agent/insights', authenticateToken, (req, res) => proxyToAgent(req, res, `/agent/insights/${req.user.userId}`));
+router.get('/agent/daily-quests', authenticateToken, (req, res) => proxyToAgent(req, res, `/agent/daily-quests/${req.user.userId}`));
+router.post('/agent/schedule', authenticateToken, (req, res) => proxyToAgent(req, res, `/agent/schedule/${req.user.userId}`));
+router.get('/agent/companion', authenticateToken, (req, res) => proxyToAgent(req, res, `/agent/companion/${req.user.userId}`));
+router.get('/agent/habits', authenticateToken, (req, res) => proxyToAgent(req, res, `/agent/habits/${req.user.userId}`));
+router.get('/agent/focus', authenticateToken, (req, res) => proxyToAgent(req, res, `/agent/focus/${req.user.userId}`));
+router.get('/agent/achievements', authenticateToken, (req, res) => proxyToAgent(req, res, `/agent/achievements/${req.user.userId}`));
+router.get('/agent/quest-board', authenticateToken, (req, res) => proxyToAgent(req, res, `/agent/quest-board/${req.user.userId}`));
+
+// Also emit task completion events for agent analytics
+// Wrap the existing PUT /tasks/:id to emit events on status → Done
+const originalTaskUpdate = router.stack.find(r => r.route && r.route.path === '/tasks/:id' && r.route.methods.put);
+
+// Use router.put('/tasks/:id') override is not feasible without refactor;
+// instead log task_complete events from the client side via POST /events
+// This is documented for the frontend integration phase.
+
 // Use router for /api
 app.use('/api', router);
 
