@@ -5,6 +5,10 @@ process.env.JWT_SECRET = 'test-only-fake-jwt-secret-0123456789abcdef';
 process.env.CORS_ORIGIN = 'http://allowed.example.test';
 // Discard port: connections are refused immediately, so no real network traffic
 process.env.AGENT_SERVICE_URL = 'http://127.0.0.1:9';
+// High enough that the main suite's many signups never hit the auth limiter; rate-limit.test.js lowers it
+process.env.AUTH_RATE_LIMIT_MAX = '1000';
+process.env.AUTH_EMAIL_RATE_LIMIT_MAX = '1000';
+process.env.TRUST_PROXY = '';
 // Set to '' rather than delete: dotenv never overrides an existing key, so a deleted var would be
 // refilled from backend/.env (a DATABASE_URL there would silently point the suite at a real DB).
 for (const name of ['AGENT_SERVICE_SECRET', 'DATABASE_URL', 'DB_SSL', 'DB_SSL_INSECURE', 'DB_SSL_CA']) {

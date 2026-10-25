@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { rateLimit } = require('express-rate-limit');
 require('dotenv').config();
 const { initializeDB } = require('./db');
 
@@ -35,6 +36,33 @@ const checkStartupConfig = () => {
 };
 
 checkStartupConfig();
+
+// Behind a hosting proxy (e.g. Render) set TRUST_PROXY to the hop count so req.ip is the client, not the proxy
+const trustProxyHops = Number.parseInt(process.env.TRUST_PROXY, 10);
+if (trustProxyHops > 0) app.set('trust proxy', trustProxyHops);
+
+const positiveIntEnv = (name, fallback) => {
+    const n = Number.parseInt(process.env[name], 10);
+    return n > 0 ? n : fallback;
+};
+
+const RATE_LIMIT_DEFAULTS = {
+    windowMs: 15 * 60 * 1000,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { message: "Too many attempts, please try again later." },
+};
+
+// Per-IP brute-force limit on signin/signup
+const authLimiter = rateLimit({ ...RATE_LIMIT_DEFAULTS, limit: positiveIntEnv('AUTH_RATE_LIMIT_MAX', 20) });
+
+// Per-account limit on failed signins, so rotating IPs can't keep guessing one password
+const signinEmailLimiter = rateLimit({
+    ...RATE_LIMIT_DEFAULTS,
+    limit: positiveIntEnv('AUTH_EMAIL_RATE_LIMIT_MAX', 10),
+    skipSuccessfulRequests: true,
+    keyGenerator: (req) => `email:${String(req.body?.email ?? '').trim().toLowerCase()}`,
+});
 
 app.use(cors({ origin: resolveCorsOrigins() }));
 app.use(express.json());
@@ -76,7 +104,7 @@ let db;
 const router = express.Router();
 
 // Auth Routes
-router.post('/signup', async (req, res) => {
+router.post('/signup', authLimiter, async (req, res) => {
     const { name, email, password } = req.body;
     try {
         const userExists = await db.query('SELECT * FROM users WHERE email = $1', [email]);
@@ -98,7 +126,7 @@ router.post('/signup', async (req, res) => {
     }
 });
 
-router.post('/signin', async (req, res) => {
+router.post('/signin', authLimiter, signinEmailLimiter, async (req, res) => {
     const { email, password } = req.body;
     try {
         const user = await db.query('SELECT * FROM users WHERE email = $1', [email]);

@@ -8,7 +8,7 @@ This repo holds the frontend and backend. The AI agent service is optional and e
 - **Backend** `backend/`: Express 5, CommonJS, `pg` 8 (raw SQL), jsonwebtoken 9, bcryptjs 3.
 - **Database**: PostgreSQL (12 tables, created on boot).
 - **Node**: 24 LTS (`.nvmrc`, `engines` in every `package.json`, `NODE_VERSION` in `netlify.toml`).
-- **Hosting**: frontend on Netlify (`netlify.toml`, base `task-tracker`). Backend host: decide later.
+- **Hosting**: frontend on Netlify (`netlify.toml`, base `task-tracker`). Backend on Render (`render.yaml`, free Docker service), DB on Neon (pooled `DATABASE_URL`).
 
 ## Commands
 ```bash
@@ -37,7 +37,7 @@ docker compose --profile test run --rm --build backend-test
 - `task-tracker/types/index.ts` — shared types. `task-tracker/components/agent/` — AgentChat, CompanionBadge, DailyQuestBoard, InsightsPanel.
 
 ## Environment variables (names and defaults only; values go in root `.env` for compose or `backend/.env` for bare npm; both gitignored)
-- **Backend**: `PORT` (5005), `JWT_SECRET`, `DATABASE_URL` or `DB_USER`/`DB_PASSWORD`/`DB_HOST`/`DB_PORT`/`DB_NAME` (default `planer`), `AGENT_SERVICE_URL` (`http://localhost:8000`), `AGENT_SERVICE_SECRET`, `CORS_ORIGIN`, `NODE_ENV`, `DB_SSL_CA`/`DB_SSL`/`DB_SSL_INSECURE` (only with `DATABASE_URL`).
+- **Backend**: `PORT` (5005), `JWT_SECRET`, `DATABASE_URL` or `DB_USER`/`DB_PASSWORD`/`DB_HOST`/`DB_PORT`/`DB_NAME` (default `planer`), `AGENT_SERVICE_URL` (`http://localhost:8000`), `AGENT_SERVICE_SECRET`, `CORS_ORIGIN`, `NODE_ENV`, `AUTH_RATE_LIMIT_MAX` (20/15 min/IP on signin+signup), `AUTH_EMAIL_RATE_LIMIT_MAX` (10 failed signins/15 min/email), `TRUST_PROXY` (`1` on Render), `DB_SSL_CA`/`DB_SSL`/`DB_SSL_INSECURE` (only with `DATABASE_URL`).
 - **Frontend**: `NEXT_PUBLIC_API_URL` (`http://127.0.0.1:5005/api`).
 - Compose reads root `.env` (see `.env.example`); it uses `DB_*`, not `DATABASE_URL` (no local SSL).
 
@@ -55,5 +55,4 @@ n/a — Planer makes no LLM calls.
 
 ## Unknowns / TODO
 - `ai-agents/` service: not decided (keep it optional).
-- Backend hosting target: decide later.
 - Whether `NEXT_PUBLIC_API_URL` is set in Netlify. Keep prod hostnames out of this file.
