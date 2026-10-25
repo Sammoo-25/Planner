@@ -124,6 +124,24 @@ Life RPG Planner is a full-stack gamified productivity application with an integ
 
 ## Setup & Running
 
+### Run locally (Docker)
+
+Starts Postgres, the backend and the frontend with one command (requires Docker with Compose).
+
+```bash
+cp .env.example .env        # then edit .env; generate secrets with: openssl rand -hex 32
+docker compose up -d --build
+```
+
+- Frontend: http://localhost:3000
+- Backend health: http://localhost:5005/api/health
+- Logs: `docker compose logs -f backend`
+- Stop: `docker compose down` (add `-v` to also wipe the database volume)
+
+The external AI agent service is not included; `/api/agent/*` returns a 503 fallback and the UI degrades gracefully. `NEXT_PUBLIC_API_URL` is baked in at build time, so rebuild (`--build`) after changing it.
+
+Prefer a manual setup? Follow the steps below.
+
 ### 1. Clone the repository
 
 ```bash
@@ -143,8 +161,8 @@ npm install
 Create `backend/.env`:
 
 ```env
-DB_USER=postgres
-DB_PASSWORD=postgres
+DB_USER=<your_db_user>
+DB_PASSWORD=<your_db_password>
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=planer
@@ -214,7 +232,7 @@ Create `ai-agents/.env` (copy from `.env.example`):
 
 ```env
 ANTHROPIC_API_KEY=sk-ant-...
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/planer
+DATABASE_URL=postgresql://<user>:<password>@localhost:5432/planer
 REDIS_URL=redis://localhost:6379
 EXPRESS_API_URL=http://localhost:5005/api
 JWT_SECRET=your-secret-key-here

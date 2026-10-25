@@ -14,19 +14,20 @@ This repo holds the frontend and backend. The AI agent service is optional and e
 ```bash
 # Frontend (task-tracker/)
 npm run dev        # http://localhost:3000
-npm run build
-npm start
+npm run build && npm start   # production build + serve
 npm run lint
 
 # Backend (backend/)
-npm run dev        # nodemon, http://localhost:5005
-npm start
+npm run dev        # nodemon, http://localhost:5005   (npm start: no reload)
+
+# Whole stack (repo root; needs .env from .env.example)
+docker compose up -d --build   # :3000 web, :5005 api, Postgres
+docker compose logs -f backend; docker compose down   # down -v wipes DB
 
 # E2E (repo root; frontend must be running on :3000)
 node test_app.js
 ```
-- Backend `npm test` is a placeholder that exits 1. No unit test suite exists.
-- No migrations: `backend/db.js` runs `CREATE TABLE IF NOT EXISTS` on boot.
+- Backend `npm test` is a placeholder that exits 1. No unit test suite exists. No migrations: `backend/db.js` creates tables on boot.
 
 ## Layout
 - `backend/server.js` — all routes, mounted at `/api`. `backend/db.js` — pool and schema.
@@ -35,10 +36,10 @@ node test_app.js
 - `task-tracker/lib/api.ts` — single HTTP client; injects JWT, redirects to `/signin` on 401/403.
 - `task-tracker/types/index.ts` — shared types. `task-tracker/components/agent/` — AgentChat, CompanionBadge, DailyQuestBoard, InsightsPanel.
 
-## Environment variables (names and defaults only; values go in `backend/.env`, gitignored)
+## Environment variables (names and defaults only; values go in root `.env` for compose or `backend/.env` for bare npm; both gitignored)
 - **Backend**: `PORT` (5005), `JWT_SECRET`, `DATABASE_URL` or `DB_USER`/`DB_PASSWORD`/`DB_HOST`/`DB_PORT`/`DB_NAME`, `AGENT_SERVICE_URL` (`http://localhost:8000`), `AGENT_SERVICE_SECRET`.
 - **Frontend**: `NEXT_PUBLIC_API_URL` (`http://127.0.0.1:5005/api`).
-- No `.env.example` exists.
+- Compose reads root `.env` (see `.env.example`); it uses `DB_*`, not `DATABASE_URL` (no local SSL).
 
 ## Gotchas
 - **AI service is optional and external.** `/api/agent/*` proxies to a FastAPI service on :8000 not in this repo. When it is down, the backend returns 503 `{fallback: true}` — expected, the UI degrades. Do not add LLM calls here.
@@ -48,7 +49,7 @@ node test_app.js
 - **Auth:** JWT expires in 1h with no refresh, so users can be logged out mid-session. Middleware also checks the user still exists.
 - **CORS** is fully open (`cors()`, no origin restriction). No input validation library; manual checks only.
 - **`test_app.js` is not a reliable gate.** It hardcodes a Windows screenshot path, runs headed, creates real signups, and many checks pass unconditionally.
-- **No Docker or CI** exists yet, so "test locally with Docker before push" cannot be met. TODO.
+- **No CI yet.** Docker Compose exists for local runs.
 
 ## AI budget
 n/a — Planer makes no LLM calls.
