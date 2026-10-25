@@ -47,6 +47,29 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # Not started by `docker compose up`. Run: docker compose --profile test run --rm backend-test
+  backend-test:
+    profiles: ["test"]
+    build:
+      context: ./backend
+      target: test
+    environment:
+      NODE_ENV: test
+      # Obviously fake, test-only value (>=32 chars); never reuse as a real secret
+      JWT_SECRET: test-only-fake-jwt-secret-0123456789abcdef
+      DB_USER: ${DB_USER:?set in .env}
+      DB_PASSWORD: ${DB_PASSWORD:?set in .env}
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: planer_test
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      db:
+        condition: service_healthy
+
   frontend:
     build:
       context: ./task-tracker

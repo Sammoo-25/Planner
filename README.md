@@ -328,6 +328,16 @@ npm run dev        # nodemon with auto-reload
 npm start          # Production
 ```
 
+### Backend tests (Jest + supertest)
+
+Runs inside Docker against a throwaway `planer_test` database on the compose network (created automatically; port 5432 is not published). Needs the root `.env`.
+
+```bash
+docker compose --profile test run --rm --build backend-test
+```
+
+Exits non-zero on any failure, so CI can run the same command. `--build` matters: `run` does not rebuild a stale image. The suite truncates all tables in `planer_test` and refuses to run against a `DB_NAME` not ending in `_test`.
+
 ### AI Agents
 
 ```bash
@@ -338,9 +348,6 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 # Run full test suite (109 infra tests + 45 browser tests)
 python test_suite.py
-
-# Browser E2E tests (requires all services running)
-node ../test_app.js
 ```
 
 ---
@@ -437,7 +444,6 @@ Planner/
 │   ├── requirements.txt
 │   └── .env.example
 │
-├── test_app.js               # Playwright E2E browser tests
 └── .gitignore
 ```
 

@@ -6,7 +6,7 @@ This repo holds the frontend and backend. The AI agent service is optional and e
 ## Stack
 - **Frontend** `task-tracker/`: Next 16.1.1, React 19.2.3, TypeScript 5, Tailwind 4, zustand 5, ESLint 9.
 - **Backend** `backend/`: Express 5, CommonJS, `pg` 8 (raw SQL), jsonwebtoken 9, bcryptjs 3.
-- **Database**: PostgreSQL (12 tables, created on boot). **Root**: Playwright devDependency (E2E only).
+- **Database**: PostgreSQL (12 tables, created on boot).
 - **Node**: 24 LTS (`.nvmrc`, `engines` in every `package.json`, `NODE_VERSION` in `netlify.toml`).
 - **Hosting**: frontend on Netlify (`netlify.toml`, base `task-tracker`). Backend host: decide later.
 
@@ -24,13 +24,13 @@ npm run dev        # nodemon, http://localhost:5005   (npm start: no reload)
 docker compose up -d --build   # :3000 web, :5005 api, Postgres
 docker compose logs -f backend; docker compose down   # down -v wipes DB
 
-# E2E (repo root; frontend must be running on :3000)
-node test_app.js
+# Backend tests (repo root; Jest + supertest in Docker, DB `planer_test`; --build avoids a stale image)
+docker compose --profile test run --rm --build backend-test
 ```
-- Backend `npm test` is a placeholder that exits 1. No unit test suite exists. No migrations: `backend/db.js` creates tables on boot.
+- Tests live in `backend/__tests__/` and truncate all tables; they refuse a `DB_NAME` not ending in `_test`. No migrations: `backend/db.js` creates tables on boot.
 
 ## Layout
-- `backend/server.js` — all routes, mounted at `/api`. `backend/db.js` — pool and schema.
+- `backend/server.js` — all routes, mounted at `/api`; exports `app`/`init` for tests, listens only when run directly. `backend/db.js` — pool and schema.
 - `task-tracker/app/` — pages (dashboard `page.tsx`, board, calendar, planner, settings, signin, signup, stats).
 - `task-tracker/context/` — Auth → Task → Gamification → Focus → Agent providers (`app/layout.tsx`).
 - `task-tracker/lib/api.ts` — single HTTP client; injects JWT, redirects to `/signin` on 401/403.
@@ -48,7 +48,6 @@ node test_app.js
 - **Events:** `POST /api/events` is disabled (503) unless `AGENT_SERVICE_SECRET` is >=32 chars; then it needs a matching `x-internal-secret`. `GET /api/health` is also unauthenticated.
 - **Auth:** JWT expires in 1h with no refresh, so users can be logged out mid-session. Middleware also checks the user still exists.
 - **CORS** allows only `CORS_ORIGIN` (dev default: localhost/127.0.0.1:3000); production refuses to start without it. Server also refuses a `JWT_SECRET` <32 chars or `change-me*`. No validation library; manual checks only.
-- **`test_app.js` is not a reliable gate.** It hardcodes a Windows screenshot path, runs headed, creates real signups, and many checks pass unconditionally.
 - **No CI yet.** Docker Compose exists for local runs.
 
 ## AI budget

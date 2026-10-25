@@ -16,7 +16,7 @@ const sslConfig = () => {
   if (insecure) return { rejectUnauthorized: false };
   const ssl = { rejectUnauthorized: true };
   // PEM may be passed on one line with literal "\n" escapes
-  if (process.env.DB_SSL_CA) ssl.ca = process.env.DB_SSL_CA.replace(/\n/g, '\n');
+  if (process.env.DB_SSL_CA) ssl.ca = process.env.DB_SSL_CA.replace(/\\n/g, '\n');
   return ssl;
 };
 
@@ -290,4 +290,4 @@ const initializeDB = async () => {
   }
 };
 
-module.exports = { initializeDB, sslConfig };
+module.exports = { initializeDB, sslConfig, resolveDbName, stripSslParams };

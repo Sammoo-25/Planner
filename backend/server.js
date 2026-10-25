@@ -1,12 +1,3 @@
-process.on('uncaughtException', (err) => {
-    console.error('Uncaught exception, exiting', err);
-    process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
 const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
@@ -31,6 +22,10 @@ const checkStartupConfig = () => {
     const secret = process.env.JWT_SECRET || '';
     if (secret.length < 32 || secret.startsWith('change-me')) {
         console.error('FATAL: JWT_SECRET must be set, at least 32 characters, and not a "change-me" placeholder (generate with: openssl rand -hex 32).');
+        process.exit(1);
+    }
+    if (String(process.env.NODE_ENV).toLowerCase() === 'production' && secret.startsWith('test-only-')) {
+        console.error('FATAL: JWT_SECRET is a test-only value and must not be used when NODE_ENV=production.');
         process.exit(1);
     }
     if (process.env.NODE_ENV === 'production' && resolveCorsOrigins().length === 0) {
@@ -706,12 +701,31 @@ app.use((err, req, res, next) => {
     res.status(status).json({ message: status === 500 ? "Server error" : "Bad request" });
 });
 
-// Initialize Database and then start Server
-initializeDB().then(pool => {
-    db = pool;
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
+// Tests await init() and drive `app` directly; only a direct `node server.js` binds a port.
+const init = async () => {
+    db = await initializeDB();
+    return db;
+};
+
+const close = () => db && db.end();
+
+if (require.main === module) {
+    process.on('uncaughtException', (err) => {
+        console.error('Uncaught exception, exiting', err);
+        process.exit(1);
     });
-}).catch(err => {
-    console.error("Failed to initialize database", err);
-});
+
+    process.on('unhandledRejection', (reason, promise) => {
+        console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    });
+
+    init().then(() => {
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    }).catch(err => {
+        console.error("Failed to initialize database", err);
+    });
+}
+
+module.exports = { app, init, close, checkStartupConfig };
