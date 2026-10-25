@@ -1,26 +1,77 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/postgres`,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
-});
+const isProduction = () => String(process.env.NODE_ENV).toLowerCase() === 'production';
+
+// TLS settings for the pg pools. Only applies to DATABASE_URL; the DB_* path (compose) is plain TCP.
+// Verified TLS is the default; weakening is explicit, dev-only opt-in.
+const sslConfig = () => {
+  const insecure = process.env.DB_SSL_INSECURE === 'true';
+  const disabled = process.env.DB_SSL === 'false';
+  if (isProduction() && (insecure || disabled)) {
+    throw new Error('FATAL: DB_SSL_INSECURE / DB_SSL=false are not allowed when NODE_ENV=production.');
+  }
+  if (!process.env.DATABASE_URL) return false;
+  if (disabled) return false;
+  if (insecure) return { rejectUnauthorized: false };
+  const ssl = { rejectUnauthorized: true };
+  // PEM may be passed on one line with literal "\n" escapes
+  if (process.env.DB_SSL_CA) ssl.ca = process.env.DB_SSL_CA.replace(/\n/g, '\n');
+  return ssl;
+};
+
+const DB_NAME_PATTERN = /^[a-z_][a-z0-9_]{0,62}$/;
+const resolveDbName = () => {
+  const name = process.env.DB_NAME || 'planer';
+  if (!DB_NAME_PATTERN.test(name)) {
+    throw new Error(`Invalid DB_NAME "${name}": must match ${DB_NAME_PATTERN}`);
+  }
+  return name;
+};
+
+const SSL_URL_PARAMS = ['sslmode', 'sslcert', 'sslkey', 'sslrootcert', 'ssl'];
+
+// pg-connection-string values override the Pool `ssl` option, so URL ssl params would silently win
+const stripSslParams = (rawUrl) => {
+  const url = new URL(rawUrl);
+  const present = SSL_URL_PARAMS.filter((p) => url.searchParams.has(p));
+  if (present.length === 0) return rawUrl;
+  present.forEach((p) => url.searchParams.delete(p));
+  console.warn('DATABASE_URL ssl* query parameters are ignored; use DB_SSL_CA / DB_SSL / DB_SSL_INSECURE instead.');
+  return url.toString();
+};
+
+const dbUrl = (database) =>
+  process.env.DATABASE_URL
+    ? stripSslParams(process.env.DATABASE_URL)
+    : `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${database}`;
+
+const DUPLICATE_DATABASE = '42P04';
+
+// Without DATABASE_URL we connect to the maintenance DB first and create the target DB if missing
+const ensureDatabase = async (dbName) => {
+  const adminPool = new Pool({ connectionString: dbUrl('postgres'), ssl: sslConfig() });
+  try {
+    const res = await adminPool.query('SELECT 1 FROM pg_database WHERE datname = $1', [dbName]);
+    if (res.rowCount === 0) {
+      console.log(`Creating database '${dbName}'...`);
+      // Identifiers can't be parameterized; dbName is validated and quoted here
+      await adminPool.query(`CREATE DATABASE "${dbName}"`);
+    }
+  } catch (err) {
+    // Another replica created it between our check and CREATE
+    if (err.code !== DUPLICATE_DATABASE) throw err;
+  } finally {
+    await adminPool.end().catch(() => {});
+  }
+};
 
 const initializeDB = async () => {
   try {
-    // For local development where we might need to create the 'planer' DB
-    if (!process.env.DATABASE_URL) {
-      const res = await pool.query("SELECT 1 FROM pg_database WHERE datname = 'planer'");
-      if (res.rowCount === 0) {
-        console.log("Creating database 'planer'...");
-        await pool.query("CREATE DATABASE planer");
-      }
-    }
+    const dbName = process.env.DATABASE_URL ? null : resolveDbName();
+    if (dbName) await ensureDatabase(dbName);
 
-    const planerPool = new Pool({
-      connectionString: process.env.DATABASE_URL || `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
-      ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
-    });
+    const planerPool = new Pool({ connectionString: dbUrl(dbName), ssl: sslConfig() });
 
     // --- Core tables (unchanged) ---
 
@@ -239,4 +290,4 @@ const initializeDB = async () => {
   }
 };
 
-module.exports = { initializeDB };
+module.exports = { initializeDB, sslConfig };

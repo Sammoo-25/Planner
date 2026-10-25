@@ -27,6 +27,7 @@ services:
       # Optional external agent service, run on the host; unreachable → 503 fallbacks
       AGENT_SERVICE_URL: ${AGENT_SERVICE_URL:-http://host.docker.internal:8000}
       AGENT_SERVICE_SECRET: ${AGENT_SERVICE_SECRET:-}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://127.0.0.1:3000}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:

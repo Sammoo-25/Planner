@@ -166,7 +166,7 @@ DB_PASSWORD=<your_db_password>
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=planer
-JWT_SECRET=your-secret-key-here
+JWT_SECRET=<openssl rand -hex 32>
 PORT=5005
 AGENT_SERVICE_URL=http://localhost:8000
 AGENT_SERVICE_SECRET=your-internal-secret-here
@@ -235,7 +235,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 DATABASE_URL=postgresql://<user>:<password>@localhost:5432/planer
 REDIS_URL=redis://localhost:6379
 EXPRESS_API_URL=http://localhost:5005/api
-JWT_SECRET=your-secret-key-here
+JWT_SECRET=<openssl rand -hex 32>
 AGENT_SERVICE_SECRET=your-internal-secret-here
 AGENT_SERVICE_PORT=8000
 ```
@@ -283,12 +283,17 @@ Expected response:
 | `DB_PASSWORD` | Yes | PostgreSQL password |
 | `DB_HOST` | Yes | Database host (usually `localhost`) |
 | `DB_PORT` | Yes | Database port (usually `5432`) |
-| `DB_NAME` | Yes | Must be `planer` |
-| `JWT_SECRET` | Yes | Secret for signing JWT tokens |
+| `DB_NAME` | No | Database to create/use (default `planer`, intentional single-n); lowercase letters, digits, `_` only |
+| `JWT_SECRET` | Yes | Secret for signing JWT tokens; >= 32 chars, not a `change-me` placeholder (server refuses to start otherwise) |
 | `PORT` | No | API port (default: `5005`) |
 | `DATABASE_URL` | No | Full connection string — overrides individual DB_* vars in production |
 | `AGENT_SERVICE_URL` | No | Agent service URL (default: `http://localhost:8000`) |
-| `AGENT_SERVICE_SECRET` | Yes | Shared secret for backend ↔ agent communication |
+| `AGENT_SERVICE_SECRET` | No | Shared secret for backend <-> agent calls; `POST /api/events` is disabled (503) unless it is >= 32 chars |
+| `CORS_ORIGIN` | Prod: Yes | Comma-separated allowed browser origins (dev default: `http://localhost:3000,http://127.0.0.1:3000`) |
+| `NODE_ENV` | No | `production` requires CORS_ORIGIN and refuses `DB_SSL_INSECURE` / `DB_SSL=false` |
+| `DB_SSL_CA` | No | PEM CA for verified `DATABASE_URL` TLS (backslash-n escapes allowed) |
+| `DB_SSL` | No | `false` = no TLS for `DATABASE_URL` (local only; refused in production) |
+| `DB_SSL_INSECURE` | No | `true` = TLS without cert verification (dev only; refused in production). `ssl*` params in `DATABASE_URL` are ignored |
 
 ### `ai-agents/.env`
 

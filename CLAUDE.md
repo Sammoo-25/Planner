@@ -37,17 +37,17 @@ node test_app.js
 - `task-tracker/types/index.ts` — shared types. `task-tracker/components/agent/` — AgentChat, CompanionBadge, DailyQuestBoard, InsightsPanel.
 
 ## Environment variables (names and defaults only; values go in root `.env` for compose or `backend/.env` for bare npm; both gitignored)
-- **Backend**: `PORT` (5005), `JWT_SECRET`, `DATABASE_URL` or `DB_USER`/`DB_PASSWORD`/`DB_HOST`/`DB_PORT`/`DB_NAME`, `AGENT_SERVICE_URL` (`http://localhost:8000`), `AGENT_SERVICE_SECRET`.
+- **Backend**: `PORT` (5005), `JWT_SECRET`, `DATABASE_URL` or `DB_USER`/`DB_PASSWORD`/`DB_HOST`/`DB_PORT`/`DB_NAME` (default `planer`), `AGENT_SERVICE_URL` (`http://localhost:8000`), `AGENT_SERVICE_SECRET`, `CORS_ORIGIN`, `NODE_ENV`, `DB_SSL_CA`/`DB_SSL`/`DB_SSL_INSECURE` (only with `DATABASE_URL`).
 - **Frontend**: `NEXT_PUBLIC_API_URL` (`http://127.0.0.1:5005/api`).
 - Compose reads root `.env` (see `.env.example`); it uses `DB_*`, not `DATABASE_URL` (no local SSL).
 
 ## Gotchas
 - **AI service is optional and external.** `/api/agent/*` proxies to a FastAPI service on :8000 not in this repo. When it is down, the backend returns 503 `{fallback: true}` — expected, the UI degrades. Do not add LLM calls here.
 - **Netlify needs `NEXT_PUBLIC_API_URL`.** `netlify.toml` doesn't set it, and `lib/api.ts` falls back to `http://127.0.0.1:5005/api`, which breaks in prod. It's inlined at build time, so set it in Netlify site env vars (Builds scope) and redeploy after changing it.
-- **DB name is intentionally misspelled.** `db.js` creates database `planer` (hardcoded) but creates tables in `DB_NAME`. Keep `DB_NAME=planer`. `DATABASE_URL` enables SSL with `rejectUnauthorized: false`; the `DB_*` path uses no SSL.
-- **Unauthenticated routes:** `POST /api/events` (guarded only by `x-internal-secret` = `AGENT_SERVICE_SECRET`) and `GET /api/health`.
+- **DB name is intentionally misspelled.** `db.js` creates/uses `DB_NAME` (default `planer`, validated). `DATABASE_URL` verifies TLS by default (`DB_SSL_CA`); local needs `DB_SSL=false` or `DB_SSL_INSECURE=true` (both fatal in production); URL `ssl*` params are stripped. `DB_*` path: no SSL.
+- **Events:** `POST /api/events` is disabled (503) unless `AGENT_SERVICE_SECRET` is >=32 chars; then it needs a matching `x-internal-secret`. `GET /api/health` is also unauthenticated.
 - **Auth:** JWT expires in 1h with no refresh, so users can be logged out mid-session. Middleware also checks the user still exists.
-- **CORS** is fully open (`cors()`, no origin restriction). No input validation library; manual checks only.
+- **CORS** allows only `CORS_ORIGIN` (dev default: localhost/127.0.0.1:3000); production refuses to start without it. Server also refuses a `JWT_SECRET` <32 chars or `change-me*`. No validation library; manual checks only.
 - **`test_app.js` is not a reliable gate.** It hardcodes a Windows screenshot path, runs headed, creates real signups, and many checks pass unconditionally.
 - **No CI yet.** Docker Compose exists for local runs.
 

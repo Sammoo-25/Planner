@@ -1,11 +1,13 @@
 process.on('uncaughtException', (err) => {
-    console.error('There was an uncaught error', err);
+    console.error('Uncaught exception, exiting', err);
+    process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
+const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
@@ -16,7 +18,30 @@ const { initializeDB } = require('./db');
 const app = express();
 const PORT = process.env.PORT || 5005;
 
-app.use(cors());
+const DEFAULT_DEV_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+
+const resolveCorsOrigins = () => {
+    const raw = process.env.CORS_ORIGIN;
+    if (raw && raw.trim()) return raw.split(',').map((o) => o.trim()).filter(Boolean);
+    return process.env.NODE_ENV === 'production' ? [] : DEFAULT_DEV_ORIGINS;
+};
+
+// Fail fast on unsafe config instead of running with weak secrets or open CORS
+const checkStartupConfig = () => {
+    const secret = process.env.JWT_SECRET || '';
+    if (secret.length < 32 || secret.startsWith('change-me')) {
+        console.error('FATAL: JWT_SECRET must be set, at least 32 characters, and not a "change-me" placeholder (generate with: openssl rand -hex 32).');
+        process.exit(1);
+    }
+    if (process.env.NODE_ENV === 'production' && resolveCorsOrigins().length === 0) {
+        console.error('FATAL: CORS_ORIGIN must be set (comma-separated origins) when NODE_ENV=production.');
+        process.exit(1);
+    }
+};
+
+checkStartupConfig();
+
+app.use(cors({ origin: resolveCorsOrigins() }));
 app.use(express.json());
 
 // Request logger
@@ -32,7 +57,7 @@ const authenticateToken = (req, res, next) => {
 
     if (!token) return res.status(401).json({ message: "No token provided" });
 
-    jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
+    jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] }, async (err, user) => {
         if (err) return res.status(403).json({ message: "Invalid token" });
         
         try {
@@ -70,7 +95,7 @@ router.post('/signup', async (req, res) => {
             [name, email, hashedPassword]
         );
 
-        const token = jwt.sign({ userId: newUser.rows[0].id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ userId: newUser.rows[0].id }, process.env.JWT_SECRET, { expiresIn: '1h', algorithm: 'HS256' });
         res.status(201).json({ user: newUser.rows[0], token });
     } catch (err) {
         console.error(err);
@@ -91,7 +116,7 @@ router.post('/signin', async (req, res) => {
             return res.status(400).json({ message: "Invalid credentials" });
         }
 
-        const token = jwt.sign({ userId: user.rows[0].id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ userId: user.rows[0].id }, process.env.JWT_SECRET, { expiresIn: '1h', algorithm: 'HS256' });
         res.json({ user: { id: user.rows[0].id, name: user.rows[0].name, email: user.rows[0].email }, token });
     } catch (err) {
         console.error(err);
@@ -561,19 +586,47 @@ router.put('/habits/:id', authenticateToken, async (req, res) => {
 
 // --- Events (internal — used by agent service) ---
 
+const MIN_SECRET_LENGTH = 32;
+const EVENT_TYPE_PATTERN = /^[a-z][a-z0-9_.]{0,49}$/; // events.event_type is VARCHAR(50)
+const MAX_PAYLOAD_BYTES = 16 * 1024;
+
+// Hash both sides so timingSafeEqual gets equal-length buffers and length doesn't leak
+const secretsMatch = (provided, expected) => {
+    const digest = (v) => crypto.createHash('sha256').update(String(v)).digest();
+    return crypto.timingSafeEqual(digest(provided), digest(expected));
+};
+
 router.post('/events', async (req, res) => {
-    const secret = req.headers['x-internal-secret'];
-    if (!secret || secret !== process.env.AGENT_SERVICE_SECRET) {
+    const expected = process.env.AGENT_SERVICE_SECRET;
+    if (!expected || expected.length < MIN_SECRET_LENGTH) {
+        return res.status(503).json({ message: "Events endpoint disabled" });
+    }
+    const provided = req.headers['x-internal-secret'];
+    if (!provided || !secretsMatch(provided, expected)) {
         return res.status(403).json({ message: "Forbidden" });
     }
-    const { user_id, event_type, payload } = req.body;
-    if (!user_id || !event_type) {
-        return res.status(400).json({ message: "user_id and event_type are required" });
+    const { user_id, event_type, payload } = req.body || {};
+    if (!Number.isInteger(user_id) || user_id <= 0) {
+        return res.status(400).json({ message: "user_id must be a positive integer" });
+    }
+    if (typeof event_type !== 'string' || !EVENT_TYPE_PATTERN.test(event_type)) {
+        return res.status(400).json({ message: "invalid event_type" });
+    }
+    if (payload !== undefined && payload !== null && (typeof payload !== 'object' || Array.isArray(payload))) {
+        return res.status(400).json({ message: "payload must be an object" });
+    }
+    const payloadJson = payload ? JSON.stringify(payload) : null;
+    if (payloadJson && Buffer.byteLength(payloadJson) > MAX_PAYLOAD_BYTES) {
+        return res.status(413).json({ message: "payload too large" });
     }
     try {
+        const user = await db.query('SELECT 1 FROM users WHERE id = $1', [user_id]);
+        if (user.rowCount === 0) {
+            return res.status(400).json({ message: "unknown user_id" });
+        }
         await db.query(
             `INSERT INTO events (user_id, event_type, payload) VALUES ($1, $2, $3::jsonb)`,
-            [user_id, event_type, payload ? JSON.stringify(payload) : null]
+            [user_id, event_type, payloadJson]
         );
         res.status(201).json({ status: "logged" });
     } catch (err) {
@@ -595,7 +648,7 @@ async function proxyToAgent(req, res, agentPath) {
             headers: {
                 'Content-Type': 'application/json',
                 'x-user-id': String(req.user.userId),
-                'x-internal-secret': process.env.AGENT_SERVICE_SECRET || ''
+                ...((process.env.AGENT_SERVICE_SECRET || '').length >= MIN_SECRET_LENGTH && { 'x-internal-secret': process.env.AGENT_SERVICE_SECRET })
             }
         };
         if (req.method !== 'GET') {
@@ -627,8 +680,7 @@ router.get('/agent/quest-board', authenticateToken, (req, res) => proxyToAgent(r
 const originalTaskUpdate = router.stack.find(r => r.route && r.route.path === '/tasks/:id' && r.route.methods.put);
 
 // Use router.put('/tasks/:id') override is not feasible without refactor;
-// instead log task_complete events from the client side via POST /events
-// This is documented for the frontend integration phase.
+// POST /events is service-to-service only (agent service), not for browser clients.
 
 // Use router for /api
 app.use('/api', router);
