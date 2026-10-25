@@ -290,6 +290,9 @@ Expected response:
 | `AGENT_SERVICE_URL` | No | Agent service URL (default: `http://localhost:8000`) |
 | `AGENT_SERVICE_SECRET` | No | Shared secret for backend <-> agent calls; `POST /api/events` is disabled (503) unless it is >= 32 chars |
 | `CORS_ORIGIN` | Prod: Yes | Comma-separated allowed browser origins (dev default: `http://localhost:3000,http://127.0.0.1:3000`) |
+| `AUTH_RATE_LIMIT_MAX` | No | Signin + signup requests allowed per IP per 15 min (default `20`); excess gets 429 |
+| `AUTH_EMAIL_RATE_LIMIT_MAX` | No | Failed signins per email per 15 min (default `10`); excess gets 429 |
+| `TRUST_PROXY` | No | Number of proxy hops in front of the app (`1` on Render) so rate limiting sees the client IP; unset locally |
 | `NODE_ENV` | No | `production` requires CORS_ORIGIN and refuses `DB_SSL_INSECURE` / `DB_SSL=false` |
 | `DB_SSL_CA` | No | PEM CA for verified `DATABASE_URL` TLS (backslash-n escapes allowed) |
 | `DB_SSL` | No | `false` = no TLS for `DATABASE_URL` (local only; refused in production) |
@@ -459,8 +462,14 @@ Set the environment variable:
 NEXT_PUBLIC_API_URL=https://your-backend-domain.com/api
 ```
 
-### Backend
-Deploy `backend/` to any Node.js host (Railway, Render, Fly.io). Set `DATABASE_URL` and all other env vars. The schema auto-creates on startup.
+### Backend (Render + Neon)
+`render.yaml` is a Render Blueprint for the API: a free Docker web service built from the production stage of `backend/Dockerfile`, health check `/api/health`, auto-deploy on `main` when `backend/` changes.
+
+1. Create a Neon Postgres database and copy its **pooled** connection string (TLS is verified with the system CA store; no `DB_SSL_CA` needed).
+2. In Render: New → Blueprint → this repo. Render asks for the `sync: false` values: `DATABASE_URL`, `JWT_SECRET` (`openssl rand -hex 32`), `CORS_ORIGIN` (the frontend origin, no trailing slash).
+3. The schema auto-creates on first startup. Check `https://<service>.onrender.com/api/health`.
+
+Free-tier services sleep when idle; the first request after a pause is slow.
 
 ### AI Agent Service
 Deploy `ai-agents/` to a Python host (Railway, Render, or any Docker-capable host). Requires PostgreSQL access and an Anthropic API key. Redis is optional.

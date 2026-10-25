@@ -1,0 +1,36 @@
+# Render Blueprint for the backend API. Frontend stays on Netlify (netlify.toml).
+# Secrets use sync: false: Render asks for them once at Blueprint creation, so no values live in this public repo.
+services:
+  - type: web
+    name: planer-api
+    runtime: docker
+    # Same AWS region as the database to keep latency low; can't be changed later.
+    region: ohio
+    plan: free
+    branch: main
+    autoDeployTrigger: commit
+    # Repo-relative paths; the last Dockerfile stage (production) is the default target.
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    # Only backend changes trigger a deploy (frontend deploys via Netlify).
+    buildFilter:
+      paths:
+        - backend/**
+      ignoredPaths:
+        - backend/__tests__/**
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render's proxy sits in front of the app; lets the auth rate limiter key on the real client IP
+      - key: TRUST_PROXY
+        value: "1"
+      # Neon pooled connection string; TLS is verified by default (db.js).
+      - key: DATABASE_URL
+        sync: false
+      # >=32 random chars, e.g. `openssl rand -hex 32`
+      - key: JWT_SECRET
+        sync: false
+      # Netlify site origin, e.g. https://<site>.netlify.app (no trailing slash)
+      - key: CORS_ORIGIN
+        sync: false
