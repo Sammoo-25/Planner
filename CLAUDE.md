@@ -1,111 +1,59 @@
-# CLAUDE.md
+# CLAUDE.md — Life RPG Planner
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Gamified task manager: quests, XP/levels, health, focus sessions, AI features (served entirely by the external agent service).
+This repo holds the frontend and backend. The AI agent service is optional and external (not in this repo; not decided yet).
 
-## Project Overview
-
-**Life RPG Planner** — a gamified task management app (quests, XP, leveling, focus sessions). Three independent services: Next.js frontend, Express.js backend, and a Python AI agent pipeline.
-
----
+## Stack
+- **Frontend** `task-tracker/`: Next 16.1.1, React 19.2.3, TypeScript 5, Tailwind 4, zustand 5, ESLint 9.
+- **Backend** `backend/`: Express 5, CommonJS, `pg` 8 (raw SQL), jsonwebtoken 9, bcryptjs 3.
+- **Database**: PostgreSQL (12 tables, created on boot).
+- **Node**: 24 LTS (`.nvmrc`, `engines` in every `package.json`, `NODE_VERSION` in `netlify.toml`).
+- **Hosting**: frontend on Netlify (`netlify.toml`, base `task-tracker`). Backend host: decide later.
 
 ## Commands
-
-### Frontend (`task-tracker/`)
 ```bash
-npm run dev      # Dev server at localhost:3000
-npm run build    # Production build
-npm run lint     # ESLint
+# Frontend (task-tracker/)
+npm run dev        # http://localhost:3000
+npm run build && npm start   # production build + serve
+npm run lint
+
+# Backend (backend/)
+npm run dev        # nodemon, http://localhost:5005   (npm start: no reload)
+
+# Whole stack (repo root; needs .env from .env.example)
+docker compose up -d --build   # :3000 web, :5005 api, Postgres
+docker compose logs -f backend; docker compose down   # down -v wipes DB
+
+# Backend tests (repo root; Jest + supertest in Docker, DB `planer_test`; --build avoids a stale image)
+docker compose --profile test run --rm --build backend-test
 ```
+- Tests live in `backend/__tests__/` and truncate all tables; they refuse a `DB_NAME` not ending in `_test`. No migrations: `backend/db.js` creates tables on boot.
 
-### Backend (`backend/`)
-```bash
-npm run dev      # nodemon dev server at localhost:5005
-npm start        # Production server
-```
+## Layout
+- `backend/server.js` — all routes, mounted at `/api`; exports `app`/`init` for tests, listens only when run directly. `backend/db.js` — pool and schema.
+- `task-tracker/app/` — pages (dashboard `page.tsx`, board, calendar, planner, settings, signin, signup, stats).
+- `task-tracker/context/` — Auth → Task → Gamification → Focus → Agent providers (`app/layout.tsx`).
+- `task-tracker/lib/api.ts` — single HTTP client; injects JWT, redirects to `/signin` on 401/403.
+- `task-tracker/types/index.ts` — shared types. `task-tracker/components/agent/` — AgentChat, CompanionBadge, DailyQuestBoard, InsightsPanel.
 
-### AI Agents (`ai-agents/`)
-```bash
-python orchestrator.py --project /path/to/Planner
-python orchestrator.py --project /path/to/Planner --agents analyzer bugfix
-python orchestrator.py --project /path/to/Planner --skip-agents feature
-```
+## Environment variables (names and defaults only; values go in root `.env` for compose or `backend/.env` for bare npm; both gitignored)
+- **Backend**: `PORT` (5005), `JWT_SECRET`, `DATABASE_URL` or `DB_USER`/`DB_PASSWORD`/`DB_HOST`/`DB_PORT`/`DB_NAME` (default `planer`), `AGENT_SERVICE_URL` (`http://localhost:8000`), `AGENT_SERVICE_SECRET`, `CORS_ORIGIN`, `NODE_ENV`, `DB_SSL_CA`/`DB_SSL`/`DB_SSL_INSECURE` (only with `DATABASE_URL`).
+- **Frontend**: `NEXT_PUBLIC_API_URL` (`http://127.0.0.1:5005/api`).
+- Compose reads root `.env` (see `.env.example`); it uses `DB_*`, not `DATABASE_URL` (no local SSL).
 
-There is **no test suite** in any service.
+## Gotchas
+- **AI service is optional and external.** `/api/agent/*` proxies to a FastAPI service on :8000 not in this repo. When it is down, the backend returns 503 `{fallback: true}` — expected, the UI degrades. Do not add LLM calls here.
+- **Netlify needs `NEXT_PUBLIC_API_URL`.** `netlify.toml` doesn't set it, and `lib/api.ts` falls back to `http://127.0.0.1:5005/api`, which breaks in prod. It's inlined at build time, so set it in Netlify site env vars (Builds scope) and redeploy after changing it.
+- **DB name is intentionally misspelled.** `db.js` creates/uses `DB_NAME` (default `planer`, validated). `DATABASE_URL` verifies TLS by default (`DB_SSL_CA`); local needs `DB_SSL=false` or `DB_SSL_INSECURE=true` (both fatal in production); URL `ssl*` params are stripped. `DB_*` path: no SSL.
+- **Events:** `POST /api/events` is disabled (503) unless `AGENT_SERVICE_SECRET` is >=32 chars; then it needs a matching `x-internal-secret`. `GET /api/health` is also unauthenticated.
+- **Auth:** JWT expires in 1h with no refresh, so users can be logged out mid-session. Middleware also checks the user still exists.
+- **CORS** allows only `CORS_ORIGIN` (dev default: localhost/127.0.0.1:3000); production refuses to start without it. Server also refuses a `JWT_SECRET` <32 chars or `change-me*`. No validation library; manual checks only.
+- **No CI yet.** Docker Compose exists for local runs.
 
----
+## AI budget
+n/a — Planer makes no LLM calls.
 
-## Environment Variables
-
-### `backend/.env`
-```
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=planer          # intentional misspelling — must match PostgreSQL DB name
-JWT_SECRET=supersecretkey123
-PORT=5005
-DATABASE_URL=           # optional — overrides DB_* vars in production
-```
-
-### Frontend (set in hosting/shell)
-```
-NEXT_PUBLIC_API_URL=http://127.0.0.1:5005/api   # defaults to this if unset
-```
-
-### `ai-agents/.env` (copy from `.env.example`)
-```
-ANTHROPIC_API_KEY=sk-ant-...
-```
-
-### Root `.env`
-```
-ANTHROPIC_API_KEY=      # for local AI agent testing
-```
-
----
-
-## Architecture
-
-### Service Boundaries
-- **Frontend** (`task-tracker/`) — Next.js App Router, React 19, TypeScript, Tailwind CSS v4
-- **Backend** (`backend/`) — Express.js, PostgreSQL via raw SQL (`pg` driver), CommonJS
-- **AI Agents** (`ai-agents/`) — Python, Anthropic SDK, sequential orchestration
-
-Netlify deploys only the frontend (`netlify.toml` sets `base = "task-tracker"`). The backend is a separate service requiring its own host and a PostgreSQL database named `planer`.
-
-### Frontend State Model
-Four nested React Contexts in `layout.tsx` (outermost to innermost):
-`AuthContext` → `TaskContext` → `GamificationContext` → `FocusContext`
-
-Each context has a companion hook (`useAuth`, `useTasks`, `useGamification`, `useFocus`). All API calls go through `lib/api.ts`, which injects the JWT from localStorage and redirects to `/signin` on 401/403.
-
-**Gamification loop:** completing a task calls `addExp(xpAmount)` in `GamificationContext`. XP accumulates; `maxExp` is calculated per level via `hero-rank-utils.ts`. Stats sync to `player_stats` table in the backend.
-
-### Backend
-All routes live in `backend/server.js` (single file). Key route groups:
-- `/api/signup`, `/api/signin` — auth, returns JWT (1h expiry, no refresh token)
-- `/api/tasks`, `/api/tasks/:id` — CRUD, owner-scoped by `user_id` from JWT
-- `/api/subtasks` — CRUD, parent task must belong to authenticated user
-- `/api/stats` — read/write `player_stats` row (one per user)
-- `/api/focus-sessions` — POST to record a completed session
-
-`authenticateToken` middleware runs on all non-auth routes, attaches `req.user`.
-
-The database schema is auto-created on startup via `db.js` (`CREATE TABLE IF NOT EXISTS`). There is no migration system — schema changes must be made carefully to avoid breaking existing tables.
-
-### AI Agent Pipeline
-`orchestrator.py` runs four agents sequentially: **Analyzer → BugFix → Feature → Review**. Each agent inherits from `BaseAgent`, implements `build_prompt()`, and receives a shared `context` dict. System prompts are `.txt` files in `prompts/`. Output reports are saved as `.md` + `.json` in `reports/` (git-ignored). Model: `claude-sonnet-4-6`, max_tokens: 4096.
-
-### Type Definitions
-All shared frontend types are in `task-tracker/types/index.ts`: `Task`, `PlayerStats`, `Achievement`, `FocusSession`. Backend returns camelCase field names (mapped from snake_case in SQL). The backend has no TypeScript.
-
----
-
-## Key Constraints
-
-- **JWT tokens expire in 1 hour** with no refresh mechanism — users can be silently logged out mid-session.
-- **`DB_NAME=planer`** — this intentional misspelling is baked into both the backend env and the auto-create SQL; don't "fix" it without migrating the actual database.
-- **CORS is fully open** (`cors()` with no origin restriction) — don't assume it is locked down.
-- **No input validation library** — backend uses manual checks only; no Zod, Joi, or express-validator.
-- The `Planner/` directory at root is a legacy nested copy of the repo — ignore it.
+## Unknowns / TODO
+- `ai-agents/` service: not decided (keep it optional).
+- Backend hosting target: decide later.
+- Whether `NEXT_PUBLIC_API_URL` is set in Netlify. Keep prod hostnames out of this file.

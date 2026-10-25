@@ -1,11 +1,4 @@
-process.on('uncaughtException', (err) => {
-    console.error('There was an uncaught error', err);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
+const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
@@ -16,7 +9,34 @@ const { initializeDB } = require('./db');
 const app = express();
 const PORT = process.env.PORT || 5005;
 
-app.use(cors());
+const DEFAULT_DEV_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+
+const resolveCorsOrigins = () => {
+    const raw = process.env.CORS_ORIGIN;
+    if (raw && raw.trim()) return raw.split(',').map((o) => o.trim()).filter(Boolean);
+    return process.env.NODE_ENV === 'production' ? [] : DEFAULT_DEV_ORIGINS;
+};
+
+// Fail fast on unsafe config instead of running with weak secrets or open CORS
+const checkStartupConfig = () => {
+    const secret = process.env.JWT_SECRET || '';
+    if (secret.length < 32 || secret.startsWith('change-me')) {
+        console.error('FATAL: JWT_SECRET must be set, at least 32 characters, and not a "change-me" placeholder (generate with: openssl rand -hex 32).');
+        process.exit(1);
+    }
+    if (String(process.env.NODE_ENV).toLowerCase() === 'production' && secret.startsWith('test-only-')) {
+        console.error('FATAL: JWT_SECRET is a test-only value and must not be used when NODE_ENV=production.');
+        process.exit(1);
+    }
+    if (process.env.NODE_ENV === 'production' && resolveCorsOrigins().length === 0) {
+        console.error('FATAL: CORS_ORIGIN must be set (comma-separated origins) when NODE_ENV=production.');
+        process.exit(1);
+    }
+};
+
+checkStartupConfig();
+
+app.use(cors({ origin: resolveCorsOrigins() }));
 app.use(express.json());
 
 // Request logger
@@ -32,7 +52,7 @@ const authenticateToken = (req, res, next) => {
 
     if (!token) return res.status(401).json({ message: "No token provided" });
 
-    jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
+    jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] }, async (err, user) => {
         if (err) return res.status(403).json({ message: "Invalid token" });
         
         try {
@@ -70,11 +90,11 @@ router.post('/signup', async (req, res) => {
             [name, email, hashedPassword]
         );
 
-        const token = jwt.sign({ userId: newUser.rows[0].id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ userId: newUser.rows[0].id }, process.env.JWT_SECRET, { expiresIn: '1h', algorithm: 'HS256' });
         res.status(201).json({ user: newUser.rows[0], token });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: "Server error: " + err.message });
+        res.status(500).json({ message: "Server error" });
     }
 });
 
@@ -91,11 +111,11 @@ router.post('/signin', async (req, res) => {
             return res.status(400).json({ message: "Invalid credentials" });
         }
 
-        const token = jwt.sign({ userId: user.rows[0].id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ userId: user.rows[0].id }, process.env.JWT_SECRET, { expiresIn: '1h', algorithm: 'HS256' });
         res.json({ user: { id: user.rows[0].id, name: user.rows[0].name, email: user.rows[0].email }, token });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: "Server error: " + err.message });
+        res.status(500).json({ message: "Server error" });
     }
 });
 
@@ -162,6 +182,9 @@ router.delete('/tasks/:id', authenticateToken, async (req, res) => {
 // Get subtasks for a task
 router.get('/tasks/:id/subtasks', authenticateToken, async (req, res) => {
     try {
+        // 404 (not 403) for tasks the caller does not own, so existence is not revealed
+        const owned = await db.query('SELECT 1 FROM tasks WHERE id = $1 AND user_id = $2', [req.params.id, req.user.userId]);
+        if (owned.rowCount === 0) return res.status(404).json({ message: "Task not found" });
         const subtasks = await db.query(
             'SELECT * FROM subtasks WHERE task_id = $1 ORDER BY created_at ASC',
             [req.params.id]
@@ -169,7 +192,7 @@ router.get('/tasks/:id/subtasks', authenticateToken, async (req, res) => {
         res.json(subtasks.rows);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: "Server error: " + err.message });
+        res.status(500).json({ message: "Server error" });
     }
 });
 
@@ -177,6 +200,8 @@ router.get('/tasks/:id/subtasks', authenticateToken, async (req, res) => {
 router.post('/subtasks', authenticateToken, async (req, res) => {
     const { task_id, title } = req.body;
     try {
+        const owned = await db.query('SELECT 1 FROM tasks WHERE id = $1 AND user_id = $2', [task_id, req.user.userId]);
+        if (owned.rowCount === 0) return res.status(404).json({ message: "Task not found" });
         const newSubtask = await db.query(
             'INSERT INTO subtasks (task_id, title) VALUES ($1, $2) RETURNING *',
             [task_id, title]
@@ -184,56 +209,55 @@ router.post('/subtasks', authenticateToken, async (req, res) => {
         res.json(newSubtask.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: "Server error: " + err.message });
+        res.status(500).json({ message: "Server error" });
     }
 });
 
 // Update subtask (toggle completion or edit title)
 router.put('/subtasks/:id', authenticateToken, async (req, res) => {
-    const { title, is_completed } = req.body;
+    const { title, is_completed } = req.body || {};
+    const sets = [];
+    const values = [];
+    if (title !== undefined) {
+        values.push(title);
+        sets.push(`title = $${values.length}`);
+    }
+    if (is_completed !== undefined) {
+        values.push(is_completed);
+        sets.push(`is_completed = $${values.length}`);
+    }
+    if (sets.length === 0) return res.status(400).json({ message: "No fields to update" });
+
     try {
-        // Build dynamic query based on what's provided
-        let query = 'UPDATE subtasks SET ';
-        const values = [];
-        let index = 1;
-
-        if (title !== undefined) {
-            query += `title = $${index}, `;
-            values.push(title);
-            index++;
-        }
-        if (is_completed !== undefined) {
-            query += `is_completed = $${index}, `;
-            values.push(is_completed);
-            index++;
-        }
-
-        // Remove trailing comma and space
-        query = query.slice(0, -2);
-        query += ` WHERE id = $${index} RETURNING *`;
-        values.push(req.params.id);
-
-        const updatedSubtask = await db.query(query, values);
-
+        values.push(req.params.id, req.user.userId);
+        const updatedSubtask = await db.query(
+            `UPDATE subtasks s SET ${sets.join(', ')} FROM tasks t
+             WHERE s.id = $${values.length - 1} AND s.task_id = t.id AND t.user_id = $${values.length}
+             RETURNING s.*`,
+            values
+        );
         if (updatedSubtask.rowCount === 0) {
             return res.status(404).json({ message: "Subtask not found" });
         }
-
         res.json(updatedSubtask.rows[0]);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: "Server error: " + err.message });
+        res.status(500).json({ message: "Server error" });
     }
 });
 
 // Delete a subtask
 router.delete('/subtasks/:id', authenticateToken, async (req, res) => {
     try {
-        await db.query('DELETE FROM subtasks WHERE id = $1', [req.params.id]);
+        const result = await db.query(
+            'DELETE FROM subtasks s USING tasks t WHERE s.id = $1 AND s.task_id = t.id AND t.user_id = $2',
+            [req.params.id, req.user.userId]
+        );
+        if (result.rowCount === 0) return res.status(404).json({ message: "Subtask not found" });
         res.json({ message: "Subtask deleted" });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ message: "Server error: " + err.message });
+        res.status(500).json({ message: "Server error" });
     }
 });
 
@@ -283,6 +307,10 @@ router.post('/focus-sessions', authenticateToken, async (req, res) => {
         return res.status(400).json({ message: "duration_minutes and xp_earned are required" });
     }
     try {
+        if (task_id) {
+            const owned = await db.query('SELECT 1 FROM tasks WHERE id = $1 AND user_id = $2', [task_id, req.user.userId]);
+            if (owned.rowCount === 0) return res.status(404).json({ message: "Task not found" });
+        }
         const session = await db.query(
             `INSERT INTO focus_sessions (user_id, task_id, duration_minutes, xp_earned)
              VALUES ($1, $2, $3, $4) RETURNING *`,
@@ -520,8 +548,8 @@ router.put('/habits/:id/checkin', authenticateToken, async (req, res) => {
 
         const updated = await db.query(
             `UPDATE habits SET current_streak = $1, longest_streak = $2, last_checked_in = NOW()
-             WHERE id = $3 RETURNING *`,
-            [newStreak, longestStreak, req.params.id]
+             WHERE id = $3 AND user_id = $4 RETURNING *`,
+            [newStreak, longestStreak, req.params.id, req.user.userId]
         );
 
         await db.query(
@@ -561,19 +589,47 @@ router.put('/habits/:id', authenticateToken, async (req, res) => {
 
 // --- Events (internal — used by agent service) ---
 
+const MIN_SECRET_LENGTH = 32;
+const EVENT_TYPE_PATTERN = /^[a-z][a-z0-9_.]{0,49}$/; // events.event_type is VARCHAR(50)
+const MAX_PAYLOAD_BYTES = 16 * 1024;
+
+// Hash both sides so timingSafeEqual gets equal-length buffers and length doesn't leak
+const secretsMatch = (provided, expected) => {
+    const digest = (v) => crypto.createHash('sha256').update(String(v)).digest();
+    return crypto.timingSafeEqual(digest(provided), digest(expected));
+};
+
 router.post('/events', async (req, res) => {
-    const secret = req.headers['x-internal-secret'];
-    if (!secret || secret !== process.env.AGENT_SERVICE_SECRET) {
+    const expected = process.env.AGENT_SERVICE_SECRET;
+    if (!expected || expected.length < MIN_SECRET_LENGTH) {
+        return res.status(503).json({ message: "Events endpoint disabled" });
+    }
+    const provided = req.headers['x-internal-secret'];
+    if (!provided || !secretsMatch(provided, expected)) {
         return res.status(403).json({ message: "Forbidden" });
     }
-    const { user_id, event_type, payload } = req.body;
-    if (!user_id || !event_type) {
-        return res.status(400).json({ message: "user_id and event_type are required" });
+    const { user_id, event_type, payload } = req.body || {};
+    if (!Number.isInteger(user_id) || user_id <= 0) {
+        return res.status(400).json({ message: "user_id must be a positive integer" });
+    }
+    if (typeof event_type !== 'string' || !EVENT_TYPE_PATTERN.test(event_type)) {
+        return res.status(400).json({ message: "invalid event_type" });
+    }
+    if (payload !== undefined && payload !== null && (typeof payload !== 'object' || Array.isArray(payload))) {
+        return res.status(400).json({ message: "payload must be an object" });
+    }
+    const payloadJson = payload ? JSON.stringify(payload) : null;
+    if (payloadJson && Buffer.byteLength(payloadJson) > MAX_PAYLOAD_BYTES) {
+        return res.status(413).json({ message: "payload too large" });
     }
     try {
+        const user = await db.query('SELECT 1 FROM users WHERE id = $1', [user_id]);
+        if (user.rowCount === 0) {
+            return res.status(400).json({ message: "unknown user_id" });
+        }
         await db.query(
             `INSERT INTO events (user_id, event_type, payload) VALUES ($1, $2, $3::jsonb)`,
-            [user_id, event_type, payload ? JSON.stringify(payload) : null]
+            [user_id, event_type, payloadJson]
         );
         res.status(201).json({ status: "logged" });
     } catch (err) {
@@ -595,7 +651,7 @@ async function proxyToAgent(req, res, agentPath) {
             headers: {
                 'Content-Type': 'application/json',
                 'x-user-id': String(req.user.userId),
-                'x-internal-secret': process.env.AGENT_SERVICE_SECRET || ''
+                ...((process.env.AGENT_SERVICE_SECRET || '').length >= MIN_SECRET_LENGTH && { 'x-internal-secret': process.env.AGENT_SERVICE_SECRET })
             }
         };
         if (req.method !== 'GET') {
@@ -604,6 +660,11 @@ async function proxyToAgent(req, res, agentPath) {
 
         // Dynamic import of node-fetch or use built-in fetch (Node 18+)
         const response = await fetch(url, options);
+        if (response.status >= 500) {
+            // Don't pass upstream error bodies (tracebacks) through to the browser
+            console.error("Agent service error status:", response.status);
+            return res.status(503).json({ message: "Agent service unavailable", fallback: true });
+        }
         const data = await response.json();
         res.status(response.status).json(data);
     } catch (err) {
@@ -622,13 +683,7 @@ router.get('/agent/focus', authenticateToken, (req, res) => proxyToAgent(req, re
 router.get('/agent/achievements', authenticateToken, (req, res) => proxyToAgent(req, res, `/agent/achievements/${req.user.userId}`));
 router.get('/agent/quest-board', authenticateToken, (req, res) => proxyToAgent(req, res, `/agent/quest-board/${req.user.userId}`));
 
-// Also emit task completion events for agent analytics
-// Wrap the existing PUT /tasks/:id to emit events on status → Done
-const originalTaskUpdate = router.stack.find(r => r.route && r.route.path === '/tasks/:id' && r.route.methods.put);
-
-// Use router.put('/tasks/:id') override is not feasible without refactor;
-// instead log task_complete events from the client side via POST /events
-// This is documented for the frontend integration phase.
+// POST /events is service-to-service only (agent service), not for browser clients.
 
 // Use router for /api
 app.use('/api', router);
@@ -638,12 +693,39 @@ app.use((req, res) => {
     res.status(404).json({ message: "Route not found" });
 });
 
-// Initialize Database and then start Server
-initializeDB().then(pool => {
-    db = pool;
-    app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
-    });
-}).catch(err => {
-    console.error("Failed to initialize database", err);
+// Final error handler: JSON only, so Express's default HTML stack trace never reaches clients.
+// Covers malformed JSON bodies and errors thrown outside a route's try/catch.
+app.use((err, req, res, next) => {
+    console.error(err);
+    const status = err.status >= 400 && err.status < 500 ? err.status : 500;
+    res.status(status).json({ message: status === 500 ? "Server error" : "Bad request" });
 });
+
+// Tests await init() and drive `app` directly; only a direct `node server.js` binds a port.
+const init = async () => {
+    db = await initializeDB();
+    return db;
+};
+
+const close = () => db && db.end();
+
+if (require.main === module) {
+    process.on('uncaughtException', (err) => {
+        console.error('Uncaught exception, exiting', err);
+        process.exit(1);
+    });
+
+    process.on('unhandledRejection', (reason, promise) => {
+        console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    });
+
+    init().then(() => {
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    }).catch(err => {
+        console.error("Failed to initialize database", err);
+    });
+}
+
+module.exports = { app, init, close, checkStartupConfig };

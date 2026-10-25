@@ -124,6 +124,24 @@ Life RPG Planner is a full-stack gamified productivity application with an integ
 
 ## Setup & Running
 
+### Run locally (Docker)
+
+Starts Postgres, the backend and the frontend with one command (requires Docker with Compose).
+
+```bash
+cp .env.example .env        # then edit .env; generate secrets with: openssl rand -hex 32
+docker compose up -d --build
+```
+
+- Frontend: http://localhost:3000
+- Backend health: http://localhost:5005/api/health
+- Logs: `docker compose logs -f backend`
+- Stop: `docker compose down` (add `-v` to also wipe the database volume)
+
+The external AI agent service is not included; `/api/agent/*` returns a 503 fallback and the UI degrades gracefully. `NEXT_PUBLIC_API_URL` is baked in at build time, so rebuild (`--build`) after changing it.
+
+Prefer a manual setup? Follow the steps below.
+
 ### 1. Clone the repository
 
 ```bash
@@ -143,12 +161,12 @@ npm install
 Create `backend/.env`:
 
 ```env
-DB_USER=postgres
-DB_PASSWORD=postgres
+DB_USER=<your_db_user>
+DB_PASSWORD=<your_db_password>
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=planer
-JWT_SECRET=your-secret-key-here
+JWT_SECRET=<openssl rand -hex 32>
 PORT=5005
 AGENT_SERVICE_URL=http://localhost:8000
 AGENT_SERVICE_SECRET=your-internal-secret-here
@@ -214,10 +232,10 @@ Create `ai-agents/.env` (copy from `.env.example`):
 
 ```env
 ANTHROPIC_API_KEY=sk-ant-...
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/planer
+DATABASE_URL=postgresql://<user>:<password>@localhost:5432/planer
 REDIS_URL=redis://localhost:6379
 EXPRESS_API_URL=http://localhost:5005/api
-JWT_SECRET=your-secret-key-here
+JWT_SECRET=<openssl rand -hex 32>
 AGENT_SERVICE_SECRET=your-internal-secret-here
 AGENT_SERVICE_PORT=8000
 ```
@@ -265,12 +283,17 @@ Expected response:
 | `DB_PASSWORD` | Yes | PostgreSQL password |
 | `DB_HOST` | Yes | Database host (usually `localhost`) |
 | `DB_PORT` | Yes | Database port (usually `5432`) |
-| `DB_NAME` | Yes | Must be `planer` |
-| `JWT_SECRET` | Yes | Secret for signing JWT tokens |
+| `DB_NAME` | No | Database to create/use (default `planer`, intentional single-n); lowercase letters, digits, `_` only |
+| `JWT_SECRET` | Yes | Secret for signing JWT tokens; >= 32 chars, not a `change-me` placeholder (server refuses to start otherwise) |
 | `PORT` | No | API port (default: `5005`) |
 | `DATABASE_URL` | No | Full connection string — overrides individual DB_* vars in production |
 | `AGENT_SERVICE_URL` | No | Agent service URL (default: `http://localhost:8000`) |
-| `AGENT_SERVICE_SECRET` | Yes | Shared secret for backend ↔ agent communication |
+| `AGENT_SERVICE_SECRET` | No | Shared secret for backend <-> agent calls; `POST /api/events` is disabled (503) unless it is >= 32 chars |
+| `CORS_ORIGIN` | Prod: Yes | Comma-separated allowed browser origins (dev default: `http://localhost:3000,http://127.0.0.1:3000`) |
+| `NODE_ENV` | No | `production` requires CORS_ORIGIN and refuses `DB_SSL_INSECURE` / `DB_SSL=false` |
+| `DB_SSL_CA` | No | PEM CA for verified `DATABASE_URL` TLS (backslash-n escapes allowed) |
+| `DB_SSL` | No | `false` = no TLS for `DATABASE_URL` (local only; refused in production) |
+| `DB_SSL_INSECURE` | No | `true` = TLS without cert verification (dev only; refused in production). `ssl*` params in `DATABASE_URL` are ignored |
 
 ### `ai-agents/.env`
 
@@ -305,6 +328,16 @@ npm run dev        # nodemon with auto-reload
 npm start          # Production
 ```
 
+### Backend tests (Jest + supertest)
+
+Runs inside Docker against a throwaway `planer_test` database on the compose network (created automatically; port 5432 is not published). Needs the root `.env`.
+
+```bash
+docker compose --profile test run --rm --build backend-test
+```
+
+Exits non-zero on any failure, so CI can run the same command. `--build` matters: `run` does not rebuild a stale image. The suite truncates all tables in `planer_test` and refuses to run against a `DB_NAME` not ending in `_test`.
+
 ### AI Agents
 
 ```bash
@@ -315,9 +348,6 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 # Run full test suite (109 infra tests + 45 browser tests)
 python test_suite.py
-
-# Browser E2E tests (requires all services running)
-node ../test_app.js
 ```
 
 ---
@@ -414,7 +444,6 @@ Planner/
 │   ├── requirements.txt
 │   └── .env.example
 │
-├── test_app.js               # Playwright E2E browser tests
 └── .gitignore
 ```
 
